@@ -1,0 +1,35 @@
+{
+  "publikum": {
+    "typ": "fachpublikum",
+    "fachkenntnisse": 4,
+    "beschreibung": "Offline-Extraktion: fachpublikum (4/5)",
+    "sicherheit": "niedrig"
+  },
+  "ton": {
+    "stil": "kritisch",
+    "person": "erzaehlend",
+    "satzlaenge": "mittel",
+    "beschreibung": "Offline-Extraktion: kritisch, erzaehlend",
+    "sicherheit": "niedrig"
+  },
+  "laenge": {
+    "komprimierung": "kern",
+    "ziel_woerter": null,
+    "teil_anzahl": null,
+    "beschreibung": "Offline-Extraktion: kern",
+    "sicherheit": "niedrig"
+  },
+  "fokus": {
+    "gewichtung": {
+      "concept": 5,
+      "task": 4,
+      "reference": 3,
+      "absatz": 4
+    },
+    "ausschliesse": [
+      "Keine historische Einordnung (wer hat wann was erfunden)."
+    ],
+    "beschreibung": "Offline-Extraktion: concept=5, task=4, reference=3, absatz=4",
+    "sicherheit": "niedrig"
+  }
+}

@@ -1,0 +1,67 @@
+# Protokoll: KI-Extraktion (Stufe 2)
+
+**Zeit:** 2026-09-23T21:04:38.162Z
+**Kontext-Datei:** artikel/kontexte/fachartikel.entwurf.txt
+**Provider:** offline (regelbasiert)
+
+## Extrahierte Parameter
+
+```json
+{
+  "publikum": {
+    "typ": "fachpublikum",
+    "fachkenntnisse": 4,
+    "beschreibung": "Offline-Extraktion: fachpublikum (4/5)",
+    "sicherheit": "niedrig"
+  },
+  "ton": {
+    "stil": "kritisch",
+    "person": "erzaehlend",
+    "satzlaenge": "mittel",
+    "beschreibung": "Offline-Extraktion: kritisch, erzaehlend",
+    "sicherheit": "niedrig"
+  },
+  "laenge": {
+    "komprimierung": "kern",
+    "ziel_woerter": null,
+    "teil_anzahl": null,
+    "beschreibung": "Offline-Extraktion: kern",
+    "sicherheit": "niedrig"
+  },
+  "fokus": {
+    "gewichtung": {
+      "concept": 5,
+      "task": 4,
+      "reference": 3,
+      "absatz": 4
+    },
+    "ausschliesse": [
+      "Keine historische Einordnung (wer hat wann was erfunden)."
+    ],
+    "beschreibung": "Offline-Extraktion: concept=5, task=4, reference=3, absatz=4",
+    "sicherheit": "niedrig"
+  }
+}
+```
+
+## Sicherheit
+
+- Publikum: niedrig
+- Ton: niedrig
+- Länge: niedrig
+- Fokus: niedrig
+
+## Roh-Output des LLM (unverändert)
+
+```
+[OFFLINE-MODUS] Kein LLM erreichbar. Regelbasierte Extraktion statt KI.
+```
+
+## Hinweis
+
+Diese Extraktion ist **nicht deterministisch**. Dieselbe
+Kontext-Datei kann bei einem erneuten Aufruf leicht
+andere Parameter liefern. Die Parameter sind in
+parameter.json gespeichert und können per
+parameter.override.json manuell korrigiert werden,
+bevor der Resolver (Stufe 3) läuft.

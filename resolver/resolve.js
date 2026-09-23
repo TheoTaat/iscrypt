@@ -365,19 +365,21 @@ function main() {
   const get = f => { const i = args.indexOf(f); return i !== -1 && i + 1 < args.length ? args[i + 1] : null; };
 
   const codePath = get("--code");
-  const kontextPath = get("--kontext");
+  const parameterPath = get("--parameter"); // Neu: parameter.json aus Stufe 2
   const outPath = get("--out") || "out";
 
-  if (!codePath || !kontextPath) {
-    console.error("Nutzung: node resolver/resolve.js --code <.isc> --kontext <.txt> --out <dir>");
+  if (!codePath || !parameterPath) {
+    console.error("Nutzung: node resolver/resolve.js --code <.isc> --parameter <parameter.json> --out <dir>");
+    console.error("  parameter.json wird von resolver/kontext-extrahieren.js erzeugt.");
     process.exit(1);
   }
 
   const code = readFileSync(pathResolve(codePath), "utf-8");
-  const kontext = readFileSync(pathResolve(kontextPath), "utf-8");
+  const kontextParams = JSON.parse(readFileSync(pathResolve(parameterPath), "utf-8"));
 
-  console.log("ISCRIPT Resolver — Code + Kontext → Artikel");
+  console.log("ISCRIPT Resolver (Stufe 3) — Parameter + Code → Artikel");
   console.log("============================================");
+  console.log(`Parameter: ${pathResolve(parameterPath)}`);
 
   console.log("[1/5] Code parsen ...");
   const ast = parseIsc(code);
@@ -387,16 +389,15 @@ function main() {
   console.log(`      → ${ast._blocks.length} ?{}-Blöcke`);
   console.log(`      → SPAR: autor=${ast.spar.autor?.name || "?"}`);
 
-  console.log("[2/5] Kontext extrahieren ...");
-  const kp = extractKontext(kontext);
-  console.log(`      → Publikum: ${kp.publikum.typ} (${kp.publikum.fachkenntnisse}/5)`);
-  console.log(`      → Ton: ${kp.ton.stil}, Person: ${kp.ton.person}`);
-  console.log(`      → Komprimierung: ${kp.laenge.komprimierung}`);
-  const gw = Object.entries(kp.fokus.gewichtung);
-  if (gw.length) console.log(`      → Fokus: ${gw.map(([k, v]) => `${k}=${v}`).join(", ")}`);
+  console.log("[2/5] Parameter laden (aus Stufe 2) ...");
+  console.log(`      → Publikum: ${kontextParams.publikum.typ} (${kontextParams.publikum.fachkenntnisse}/5) — ${kontextParams.publikum.sicherheit}`);
+  console.log(`      → Ton: ${kontextParams.ton.stil}, Person: ${kontextParams.ton.person} — ${kontextParams.ton.sicherheit}`);
+  console.log(`      → Komprimierung: ${kontextParams.laenge.komprimierung} — ${kontextParams.laenge.sicherheit}`);
+  const gw = Object.entries(kontextParams.fokus.gewichtung || {});
+  if (gw.length) console.log(`      → Fokus: ${gw.map(([k, v]) => `${k}=${v}`).join(", ")} — ${kontextParams.fokus.sicherheit}`);
 
   console.log("[3/5] Invarianzprüfung ...");
-  const inv = checkInvarianzen(kp);
+  const inv = checkInvarianzen(kontextParams);
   if (!inv.ok) {
     console.error("      ✗ Verletzt: " + inv.verletzungen.map(v => v.feld).join(", "));
     process.exit(1);
@@ -404,12 +405,12 @@ function main() {
   console.log("      ✓ OK");
 
   console.log("[4/5] ?{}-Blöcke auflösen ...");
-  const resolved = ast._blocks.map(b => resolveBlock(b, kp));
+  const resolved = ast._blocks.map(b => resolveBlock(b, kontextParams));
   const ok = resolved.filter(Boolean).length;
   console.log(`      → ${ok}/${ast._blocks.length} aufgelöst`);
 
   console.log("[5/5] Markdown generieren ...");
-  const md = toMarkdown(ast, kp, resolved);
+  const md = toMarkdown(ast, kontextParams, resolved);
   mkdirSync(pathResolve(outPath), { recursive: true });
   const out = join(pathResolve(outPath), "artikel.md");
   writeFileSync(out, md, "utf-8");

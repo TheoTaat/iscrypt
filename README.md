@@ -14,39 +14,80 @@ den Fachartikel über ISCRIPT selbst, geschrieben in ISCRIPT und
 mit dem ISCRIPT-Resolver in Markdown aufgelöst.
 
 ```
-Code (.isc) + Kontext (.txt) → Artikel (Markdown)
+Kontext (freie Sprache, vom Autor)
+        ↓
+KI-Schicht: Kontext → Parameter (JSON)     ← HIER KI
+        ↓
+Resolver: Parameter + Code → Artikel       ← regelbasiert
 ```
 
 Der Artikel ist nicht nur *über* ISCRIPT — er *ist* der Prototyp.
 
 ## Schnellstart
 
-Voraussetzung: Node.js ≥ 18.
+Voraussetzung: Node.js ≥ 18, API-Key für einen LLM-Provider
+(Mistral, Moonshot oder Anthropic).
+
+**Zwei Stufen:**
 
 ```bash
+# Stufe 2: Kontext (freie Sprache) → Parameter (JSON) — KIEbene
+node resolver/kontext-extrahieren.js \
+  --kontext artikel/kontexte/fachartikel.txt \
+  --out out/
+
+# Stufe 3: Parameter + Code → Artikel — regelbasiert
 node resolver/resolve.js \
   --code artikel/iscrypt.isc \
-  --kontext artikel/kontexte/fachartikel.txt \
+  --parameter out/parameter.json \
   --out out/
 ```
 
 Ergebnis: `out/artikel.md` — der Fachartikel in Markdown.
 
-Der Resolver arbeitet in fünf Schritten (regelbasiert, kein
-Black-Box-LLM):
+**Wichtig:** Der Kontext-Text (`fachartikel.txt`) muss vom Autor
+kommen — in freier menschlicher Sprache. Die Vorlage
+`fachartikel.vorlage.txt` zeigt die vier Abschnitte (Publikum, Ton,
+Länge, Fokus). Die KI-Schicht liest diesen Text und extrahiert
+strukturierte Parameter. Der Resolver arbeitet nur noch mit den
+Parametern, nicht mit der Prosa.
 
-1. **Parsen** — die `.isc`-Datei wird in einen AST mit markierten
-   `?{}`-Stellen umgewandelt
-2. **Kontext extrahieren** — aus der freien Prosa werden vier
-   Parametergruppen extrahiert: Publikum, Ton, Länge, Fokus
-3. **Invarianzprüfung** — der Kontext darf keine faktum-Felder
-   verändern
-4. **`?{}` auflösen** — jede kontextabhängige Stelle wird anhand der
-   Kontextparameter aufgelöst
-5. **Generieren** — der aufgelöste AST wird in Markdown übersetzt
+## Wo KI hingehört — und wo nicht
 
-Jeder Schritt wird im Log protokolliert — die Auflösung ist
-nachvollziehbar und prüfbar.
+| Stufe | Was | KI? | Warum |
+|---|---|---|---|
+| 1 | Kontext schreiben | **Nein** | menschliche Autorschaft — freie Sprache ist das Herzstück |
+| 2 | Kontext → Parameter | **Ja** | freie Prosa lässt sich nicht mit Regeln verlässlich verstehen |
+| 3 | Code parsen | Nein | formal, regelbasiert |
+| 4 | Invarianten prüfen | Nein | deterministisch |
+| 5 | `?{}` auflösen | Nein | regelbasiert |
+| 6 | Rendern | Nein | formal |
+
+Nur Stufe 2 braucht KI. Alle anderen bleiben regelbasiert.
+Das ist keine Schwäche — das ist die **Nachvollziehbarkeit**.
+
+Die KI-Schicht (Stufe 2) ist als klar abgegrenzte Funktion
+implementiert: `resolver/kontext-extrahieren.js`. Sie ruft ein LLM
+auf (Provider-Chain: Mistral → Kimi → Claude), gibt `parameter.json`
+heraus und protokolliert den LLM-Output unverändert in
+`parameter.log` — damit der Autor prüfen kann, was verstanden wurde.
+
+## Grenzen des Prototyps
+
+- **Die KI-Schicht (Stufe 2) ist nicht deterministisch.** Derselbe
+  Kontext kann bei einem erneuten Aufruf zu leicht verschiedenen
+  Parametern führen.
+- **Deshalb wird der LLM-Output protokolliert** (`parameter.log`)
+  **und ist korrigierbar:** Der Autor kann `parameter.override.json`
+  anlegen, um extrahierte Parameter manuell zu überschreiben,
+  bevor der Resolver (Stufe 3) läuft.
+- **Kein LLM verfügbar?** Die KI-Schicht weicht auf eine regelbasierte
+  Offline-Extraktion aus. Diese ist bewusst einfach und produziert
+  dieselben Fehler wie der alte Schlüsselwort-Ansatz — sie dient nur
+  dem Testen, ersetzt die KI-Schicht nicht.
+- **Die Task-Schritte und Reference-Tabellen** werden geparst, aber
+  im aktuellen Markdown-Output nur teilweise gerendert. Funktioniert,
+  aber noch nicht poliert.
 
 ## Projektstruktur
 
@@ -60,10 +101,15 @@ iscrypt/
 ├── artikel/
 │   ├── iscrypt.isc                  # Der Fachartikel als ISCRIPT-Code
 │   └── kontexte/
-│       └── fachartikel.txt          # Kontext: Publikum, Ton, Länge, Fokus
+│       ├── fachartikel.entwurf.txt  # Entwurf (von der KI, zum Anpassen)
+│       └── fachartikel.vorlage.txt  # Vorlage für den Autor
 ├── resolver/
-│   └── resolve.js                   # Der Resolver (Node.js, regelbasiert)
+│   ├── kontext-extrahieren.js       # Stufe 2: KI-Schicht (Kontext → Parameter)
+│   └── resolve.js                   # Stufe 3: Resolver (Parameter + Code → Artikel)
 └── out/
+    ├── parameter.json               # Extrahierte Parameter (aus Stufe 2)
+    ├── parameter.log                # Protokoll: LLM-Output + Sicherheit
+    ├── parameter.override.json      # (optional) manuelle Korrekturen
     └── artikel.md                   # Generierter Artikel (Prototyp-Output)
 ```
 
