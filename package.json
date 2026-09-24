@@ -1,0 +1,21 @@
+{
+  "name": "iscrypt",
+  "version": "1.0.0",
+  "description": "ISCRIPT – JavaScript + Kontext: formale Code-Struktur mit freier Sprache",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheoTaat/iscrypt"
+  },
+  "keywords": [
+    "iscrypt",
+    "programming-language",
+    "context",
+    "template",
+    "dsl"
+  ],
+  "scripts": {
+    "extract": "node resolver/kontext-extrahieren.js",
+    "resolve": "node resolver/resolve.js"
+  }
+}
