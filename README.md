@@ -140,8 +140,8 @@ Zielformat. Regelbasiert, deterministisch.
 ## Verwendung
 
 ```bash
-# 1. Dieses Repo als Abhängigkeit installieren
-npm install github:TheoTaat/iscrypt
+# 1. Dieses Repo als Abhängigkeit installieren (Version gepinnt)
+npm install "iscrypt@github:TheoTaat/iscrypt#v0.1.0"
 
 # 2. Kontext A + B → Parameter
 node node_modules/iscrypt/resolver/kontext-extrahieren.js \
@@ -185,6 +185,40 @@ iscrypt/
     ├── kontext-inhalt.vorlage.txt   # Vorlage Kontext A
     └── kontext-form.vorlage.txt     # Vorlage Kontext B
 ```
+
+## Versionierung / Dependency
+
+ISCRIPT wird mit Git-Tags versioniert (SemVer: `vX.Y.Z`). Jeder
+relevante Stand (neuer Resolver, neue Domäne, Bugfix-Release)
+erhält einen Tag und einen GitHub-Release:
+
+```bash
+git tag -a v0.1.0 -m "Version 0.1.0: Beschreibung"
+git push origin v0.1.0 --notes
+```
+
+Abhängige Projekte (z. B. `iscrypt-artikel`) pinnen die Version
+im `package.json`:
+
+```json
+"dependencies": { "iscrypt": "github:TheoTaat/iscrypt#v0.1.0" }
+```
+
+Durch das `#v0.1.0`-Ref ist der Build reproduzierbar: `npm install`
+holt immer exakt diesen Tag. `package-lock.json` fixiert zusätzlich
+den konkreten Commit. Der GitHub-Dependency-Graph zeigt die
+Verbindung an.
+
+**Auf eine neue Version updaten:**
+
+1. In `iscrypt`: Änderungen committen + neuer Tag (`v0.2.0`) + push
+2. In `iscrypt-artikel`: Dependency anpassen:
+   `"iscrypt": "github:TheoTaat/iscrypt#v0.2.0"`
+3. `npm install` → neuer `package-lock.json` → commit
+4. Pipeline verifizieren: `npm run extract && npm run resolve`
+
+Ohne aktive Referenz-Änderung bleibt `iscrypt-artikel` exakt auf
+der gepinnten Version — kein stiller Bruch.
 
 ## Grundprinzipien
 
