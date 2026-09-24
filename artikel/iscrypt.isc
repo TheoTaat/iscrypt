@@ -1,102 +1,75 @@
 // ============================================================
-// ISCRIPT Artikel: "ISCRIPT — Code und Kontext"
+// ISCRIPT Code: "ISCRIPT — Code und Kontext"
 // Datei: artikel/iscrypt.isc
 //
-// Der Fachartikel über ISCRIPT, geschrieben in der
-// Domänengrammatik "Fachpublikation" (DITA + SPAR).
+// Domänenneutral: Enthält nur Fakten und Relationen über
+// ISCRIPT. Keine Format-Annahmen, keine Struktur-Vorgaben.
 //
-// Fakten (invariant) stehen direkt.
-// Rahmung (kontextabhängig) steht in ?{}-Blöcken.
+// Die rhetorische Funktion (argumentieren, einladen, belegen)
+// wandert in Kontext A (Inhalt) oder Kontext B (Form).
+// Die Struktur (welche Teile in welcher Reihenfolge, welches
+// Zielformat) wird von der Domänengrammatik + Kontext B
+// bestimmt.
 // ============================================================
 
-import domain "../domains/fachpublikation/grammatik.isc"
-
 // ----------------------------------------------------------
-// METADATEN (SPAR) — invariant
+// METADATEN — invariant (faktum)
 // ----------------------------------------------------------
-spar {
-  autor {
-    name: "Rudolf Alexander Weinmann"
-    organisation: "lyrx GmbH"
-    affiliation: "KI-gestützte Softwareentwicklung"
-  }
+// Diese Fakten sind unabhängig vom Artefakt-Typ.
 
-  publikation {
-    titel: "ISCRIPT — Code und Kontext: Eine Sprache, die Mehrdeutigkeit als Feature behandelt"
-    titelLang: "de"
-    zeitraum { von: 2026-09-23 }
-    ort: "Schwerzenbach, Schweiz"
-  }
-
-  werk {
-    typ: "whitepaper"
-    sprache: "de"
-    zitation {
-      stil: "chicagoo"
-      format: "Weinmann, Rudolf Alexander. ISCRIPT — Code und Kontext. Schwerzenbach: lyrx GmbH, 2026."
-    }
-  }
+meta {
+  autor: "Rudolf Alexander Weinmann"
+  organisation: "lyrx GmbH"
+  affiliation: "KI-gestützte Softwareentwicklung"
+  titel: "ISCRIPT — Code und Kontext"
+  untertitel: "Eine Sprache, die Mehrdeutigkeit als Feature behandelt"
+  sprache: "de"
+  zitation: "Weinmann, Rudolf Alexander. ISCRIPT — Code und Kontext. Schwerzenbach: lyrx GmbH, 2026."
+  ort: "Schwerzenbach, Schweiz"
 }
 
 // ----------------------------------------------------------
-// ARTIKEL
+// INHALT — Fakten und Relationen über ISCRIPT
 // ----------------------------------------------------------
-artikel {
+// Jeder Block ist eine kontextabhängige Stelle (?{}), deren
+// Inhalt von der Domänengrammatik und den Kontextparametern
+// (A + B) bestimmt wird.
 
-  titel: "ISCRIPT — Code und Kontext"
+inhalte [
 
-  these: "ISCRIPT verbindet formale Code-Struktur mit freier Sprache und löst Mehrdeutigkeit kontextuell auf — nicht durch Eliminierung im Programmtext, sondern durch kontrollierte Auflösung bei der Generierung."
-
-  // ==========================================================
-  // TEIL 1: CONCEPT — Was ist ISCRIPT?
-  // ==========================================================
-  concept {
-    name: "ISCRIPT"
-    definition: "ISCRIPT ist eine JavaScript-abwärtskompatible Programmiersprache mit zwei Ebenen: einer formalen Code-Ebene mit Grammatik und einer grammatikfreien Kontext-Ebene in freier Sprache. Erst beide Ebenen zusammen ergeben ausführbaren Code oder konkrete Artefakte."
-
-    begrifflich: ?{
-      // Kontextabhängige Begriffsabgrenzung:
-      // - Abgrenzung zu TypeScript: TypeScript beseitigt
-      //   Mehrdeutigkeit im Programmtext; ISCRIPT löst sie
-      //   kontextuell auf bei der Auflösung.
-      // - Abgrenzung zu DSLs: DSLs sind domänenspezifisch
-      //   und starr; ISCRIPT ist domänenspezifisch, aber
-      //   durch den Kontext erweiterbar, ohne die Grammatik
-      //   zu ändern.
-      // - Abgrenzung zu Template-Engines: Templates
-      //   variieren Ausgabe durch Parameter; ISCRIPT
-      //   variiert Ausgabe durch Prosa, nicht durch
-      //   strukturierte Parameter.
-      //
-      // Beim Publikum "fachpublikum" (gewicht 5):
-      //   Alle drei Abgrenzungen vollständig.
-      // Beim Publikum "allgemein" (gewicht 3):
-      //   Nur die TypeScript-Abgrenzung, in einem Satz.
+  {
+    id: "was-ist-iscrypt"
+    fakten: "ISCRIPT ist eine JavaScript-abwärtskompatible Programmiersprache mit zwei Ebenen: einer formalen Code-Ebene mit Grammatik und einer grammatikfreien Kontext-Ebene in freier Sprache. Erst beide Ebenen zusammen ergeben ausführbaren Code oder konkrete Artefakte."
+    kontext: ?{
+      // Die zentrale These. Wie wird sie präsentiert?
+      // - Als These in einem Fachartikel
+      // - Als Hook in einer Homepage
+      // - Als Einleitung in einem Buch
+      // - Als These in einem Vortrag
+      // Der Kontext B (Form) entscheidet.
     }
   }
 
-  concept {
-    name: "Code-Ebene"
-    definition: "Die Code-Ebene von ISCRIPT ist formales JavaScript plus markierte kontextabhängige Stellen (?{...}). Sie trägt die Struktur, die Relationen und die invariante Fakten."
-
-    begrifflich: ?{
-      // Abgrenzung zu "Kontext-Ebene":
+  {
+    id: "code-ebene"
+    fakten: "Die Code-Ebene von ISCRIPT ist formales JavaScript plus markierte kontextabhängige Stellen (?{...}). Sie trägt die Struktur, die Relationen und die invariante Fakten. Sie sagt WAS."
+    kontext: ?{
+      // Abgrenzung zur Kontext-Ebene:
       // Code sagt WAS (Struktur, Fakten), Kontext sagt WIE
       // (Präsentation, Ton, Fokus).
       //
       // Beispiel: Im Lebenslauf-Beispiel trägt der Code
       // die Stationen (was, wann, wo) als invariante Fakten.
-      // Der Kontext bestimmt, ob diese Stationen als sachliche
-      // Tabelle (Bewerbung) oder als erzählender Text
-      // (Autobiografie) erscheinen.
+      // Der Kontext bestimmt, ob diese Stationen als
+      // sachliche Tabelle (Bewerbung) oder als erzählender
+      // Text (Autobiografie) erscheinen.
     }
   }
 
-  concept {
-    name: "Kontext-Ebene"
-    definition: "Die Kontext-Ebene von ISCRIPT ist grammatikfreie Prosa. Sie beschreibt Situation, Publikum, Absicht, Ton und Länge. Sie kann nicht falsch sein — nur die Auflösung kann scheitern."
-
-    begrifflich: ?{
+  {
+    id: "kontext-ebene"
+    fakten: "Die Kontext-Ebene von ISCRIPT ist grammatikfreie Prosa. Sie beschreibt Situation, Publikum, Absicht, Ton und Länge. Sie kann nicht falsch sein — nur die Auflösung kann scheitern."
+    kontext: ?{
       // Wichtige Unterscheidung:
       // Der Kontext ist nicht "falsch", wenn er zu einem
       // unerwarteten Artefakt führt. Er ist einfach ein
@@ -109,11 +82,10 @@ artikel {
     }
   }
 
-  concept {
-    name: "Auflösung"
-    definition: "Die Auflösung ist der Prozess, der Code und Kontext verbindet und daraus ein konkretes Artefakt erzeugt. Sie ist nachvollziehbar, prüfbar und revidierbar — kein Black-Box-LLM-Aufruf."
-
-    begrifflich: ?{
+  {
+    id: "auflösung"
+    fakten: "Die Auflösung ist der Prozess, der Code und Kontext verbindet und daraus ein konkretes Artefakt erzeugt. Sie ist nachvollziehbar, prüfbar und revidierbar — kein Black-Box-LLM-Aufruf."
+    kontext: ?{
       // Im Prototyp ist die Auflösung regelbasiert:
       // 1. Kontextparameter werden aus der Prosa extrahiert
       //    (Publikum, Ton, Länge, Fokus).
@@ -128,32 +100,10 @@ artikel {
     }
   }
 
-  // ==========================================================
-  // TEIL 2: CONCEPT — Die drei Ebenen
-  // ==========================================================
-  concept {
-    name: "Die drei Ebenen"
-    definition: "ISCRIPT operiert auf drei Ebenen: Code (Struktur und Fakten), Kontext (Präsentation und Absicht) und Auflösung (Verbindung beider). Jede Ebene hat eine eigene Fehlerlogik."
-
-    begrifflich: ?{
-      // Tabelle der drei Ebenen:
-      //
-      // Ebene     | Rolle                        | Fehler möglich?
-      // ----------|------------------------------|------------------
-      // Code      | Struktur, Relationen, Fakten | Ja (Syntax, Logik)
-      // Kontext   | Situation, Publikum, Absicht | Nein
-      // Auflösung | Verbindet beide              | Ja (Fehlinterpretation)
-      //
-      // Diese Tabelle ist das Kernstück des Artikels.
-      // Sie macht das Design in einem Blick verständlich.
-    }
-  }
-
-  concept {
-    name: "Faktum und Rahmung"
-    definition: "Faktum ist invariant und kontextunabhängig (z.B. Name, Datum, Ort). Rahmung ist kontextabhängig (z.B. ob ein Datum als Jahreszahl, als Alter oder als Zeitepochenbezug erscheint). ISCRIPT erlaubt Mehrdeutigkeit in der Deutung, aber nicht in den Tatsachen."
-
-    begrifflich: ?{
+  {
+    id: "faktum-und-rahmung"
+    fakten: "Faktum ist invariant und kontextunabhängig (z.B. Name, Datum, Ort). Rahmung ist kontextabhängig (z.B. ob ein Datum als Jahreszahl, als Alter oder als Zeitepochenbezug erscheint). ISCRIPT erlaubt Mehrdeutigkeit in der Deutung, aber nicht in den Tatsachen."
+    kontext: ?{
       // Beispiel:
       // Faktum: "Geboren 1978 in Heidelberg"
       // Rahmung (Bewerbung): "1978 in Heidelberg geboren"
@@ -166,17 +116,13 @@ artikel {
     }
   }
 
-  // ==========================================================
-  // TEIL 3: CONCEPT — JavaScript, nicht TypeScript
-  // ==========================================================
-  concept {
-    name: "JavaScript als Basis"
-    definition: "ISCRIPT wählt JavaScript als Basis, nicht TypeScript. TypeScript beseitigt Mehrdeutigkeit im Programmtext durch statische Typisierung. ISCRIPT löst Mehrdeutigkeit kontextuell auf — die Typsicherheit entsteht durch den Kontext, nicht durch den Programmtext."
-
-    begrifflich: ?{
+  {
+    id: "javascript-basis"
+    fakten: "ISCRIPT wählt JavaScript als Basis, nicht TypeScript. TypeScript beseitigt Mehrdeutigkeit im Programmtext durch statische Typisierung. ISCRIPT löst Mehrdeutigkeit kontextuell auf — die Typsicherheit entsteht durch den Kontext, nicht durch den Programmtext."
+    kontext: ?{
       // Die Begründung in einem Satz:
-      // TypeScript macht den Code eindeutiger, ISCRIPT macht
-      // den Kontext aussagekräftiger.
+      // TypeScript macht den Code eindeutiger, ISCRIPT
+      // macht den Kontext aussagekräftiger.
       //
       // Für das fachpublikum (gewicht 5):
       // Ausführliche Erläuterung mit Beispiel:
@@ -189,152 +135,9 @@ artikel {
     }
   }
 
-  // ==========================================================
-  // TEIL 4: TASK — So funktioniert die Auflösung
-  // ==========================================================
-  task {
-    name: "Auflösung ausführen"
-    vorraussetzung: "Es existiert ein .isc-Datei mit Artikel-Code und eine .txt-Datei mit Kontext."
-
-    schritte [
-      {
-        anleitung: "Die .isc-Datei wird geparst. Die Domänengrammatik validiert die Struktur: Alle invarianzen-Felder müssen gesetzt sein, alle ?{}-Stellen müssen in einem concept, task, reference oder absatz stehen."
-        ergebnis: "Ein validierter AST mit markierten kontextabhängigen Stellen."
-      },
-      {
-        anleitung: "Die .txt-Kontextdatei wird gelesen. Die Kontextparameter (Publikum, Ton, Länge, Fokus) werden aus der Prosa extrahiert. Die Extraktion ist regelbasiert: Schlüsselbegriffe werden gesucht, nicht frei interpretiert."
-        ergebnis: "Ein strukturiertes Kontextobjekt mit den vier Parametergruppen."
-      },
-      {
-        anleitung: "Invarianzprüfung: Für jedes Feld in invarianzen.faktum wird geprüft, ob der Kontext es verändert. Wenn ja → Fehler. Wenn nein → Fortfahren."
-        ergebnis: "Entweder Bestätigung oder Fehlermeldung mit Feldname und Verletzung."
-      },
-      {
-        anleitung: "Auflösung der ?{}-Stellen: Für jede kontextabhängige Stelle wird anhand der Kontextparameter entschieden, ob sie vollständig, komprimiert oder weggelassen wird. Der Ton steuert Satzbau und Wortschatz."
-        ergebnis: "Ein vollständig aufgelöster Artikel-AST ohne ?{}-Markierungen."
-      },
-      {
-        anleitung: "Generierung des Artefakts: Der aufgelöste AST wird in das Zielformat übersetzt (Markdown, HTML, DITA-XML, PDF)."
-        ergebnis: "Das fertige Artefakt in out/"
-      }
-    ]
-
-    hinweise: ?{
-      // Kontextabhängige Hinweise:
-      // Für fachpublikum (gewicht 5):
-      //   - Die Invarianzprüfung ist die wichtigste Sicherheits-
-      //     maßnahme. Sie stellt sicher, dass der Kontext nie
-      //     Fakten verändert.
-      //   - Die regelbasierte Extraktion der Kontextparameter
-      //     ist bewusst konservativ: Wenn ein Parameter nicht
-      //     gefunden wird, wird ein Default verwendet, nicht
-      //     geraten.
-      //
-      // Für allgemein (gewicht 3):
-      //   - Die Auflösung ist nachvollziehbar: Jeder Schritt
-      //     ist protokolliert, jede Regel ist prüfbar.
-    }
-  }
-
-  // ==========================================================
-  // TEIL 5: TASK — Kontext schreiben
-  // ==========================================================
-  task {
-    name: "Kontext schreiben"
-    vorraussetzung: null
-
-    schritte [
-      {
-        anleitung: "Beschreiben Sie in freier Sprache: Wer ist das Publikum? (Fachpublikum, allgemein, Studenten, Management)"
-      },
-      {
-        anleitung: "Beschreiben Sie den Ton: Wie soll der Artikel klingen? (Sachlich, erzählend, überzeugend, kritisch) In welcher Person? (Ich, Wir, Erzähler)"
-      },
-      {
-        anleitung: "Geben Sie die Ziel-Länge an: Wie viele Wörter? Wie viele Abschnitte? Soll der Artikel vollständig, dicht oder auf den Kern komprimiert sein?"
-      },
-      {
-        anleitung: "Definieren Sie den Fokus: Welche Teile des Artikels sind am wichtigsten? Was soll bewusst weggelassen werden?"
-      }
-    ]
-
-    hinweise: ?{
-      // Der Kontext braucht keine Grammatik. Er ist Prosa.
-      // Aber er sollte die vier Parametergruppen abdecken:
-      // Publikum, Ton, Länge, Fokus.
-      //
-      // Beispiel-Kontext (siehe artikel/kontexte/fachartikel.txt)
-      // zeigt, wie das in der Praxis aussieht.
-    }
-  }
-
-  // ==========================================================
-  // TEIL 6: REFERENCE — Die Grammatik-Elemente
-  // ==========================================================
-  reference {
-    name: "ISCRIPT-Syntax-Elemente"
-
-    eintraege [
-      { schluessel: "?{...}", wert: "Markiert eine kontextabhängige Stelle. Der Inhalt wird bei der Auflösung anhand der Kontextparameter bestimmt.", einheit: "Syntax" },
-      { schluessel: "domain", wert: "Definiert eine Domänengrammatik. Enthält Struktur, Invarianzen und Auflösungsregeln.", einheit: "Deklaration" },
-      { schluessel: "concept", wert: "DITA-Topic: Erklärt, was etwas ist. Enthalten: name, definition (invariant), begrifflich (kontextabhängig).", einheit: "DITA-Topic" },
-      { schluessel: "task", wert: "DITA-Topic: Erklärt, wie man etwas tut. Enthalten: name, schritte (invariant), hinweise (kontextabhängig).", einheit: "DITA-Topic" },
-      { schluessel: "reference", wert: "DITA-Topic: Dokumentiert, was existiert. Enthalten: name, eintraege (invariant), bemerkung (kontextabhängig).", einheit: "DITA-Topic" },
-      { schluessel: "absatz", wert: "Freier DITA-Body-Text. Enthalten: inhalt (invariant), kontext (kontextabhängig).", einheit: "DITA-Body" },
-      { schluessel: "invarianzen", wert: "Liste der faktum-Felder, die der Kontext nicht verändern darf.", einheit: "Sicherheitsmechanismus" },
-      { schluessel: "kontextparameter", wert: "Die vier Parametergruppen, die aus der Kontext-Prosa extrahiert werden: publikum, ton, laenge, fokus.", einheit: "Schnittstelle" },
-      { schluessel: "auflösung", wert: "Die Regelmenge, die die Verbindung von Code und Kontext steuert. Deterministisch und nachvollziehbar.", einheit: "Logik" }
-    ]
-
-    bemerkung: ?{
-      // Kontextabhängige Bemerkung zur Syntax:
-      // Für fachpublikum:
-      //   Die Syntax ist bewusst minimal. ISCRIPT erfindet
-      //   keine neuen Konstrukte — es erweitert JavaScript
-      //   um zwei Dinge: ?{} für kontextabhängige Stellen
-      //   und domain für die Domänengrammatik. Alles andere
-      //   ist JavaScript.
-      //
-      // Für allgemein:
-      //   Wenn man JavaScript kann, kann man ISCRIPT lesen.
-      //   Der einzige neue Baustein ist ?{}, und der sagt:
-      //   "Hier entscheidet der Kontext."
-    }
-  }
-
-  // ==========================================================
-  // TEIL 7: REFERENCE — Domänengrammatiken und Ontologien
-  // ==========================================================
-  reference {
-    name: "Etablierte Ontologien für ISCRIPT-Domänen"
-
-    eintraege [
-      { schluessel: "Menschenleben", wert: "CIDOC CRM, Bio CRM, OntoLife, OntoBio, ResumeRDF", einheit: "Ontologien" },
-      { schluessel: "Fiktion / Narration", wert: "GOLEM, Drammar, NOnt, Transmedia Storytelling Ontology (TSO)", einheit: "Ontologien" },
-      { schluessel: "Fachpublikation", wert: "SPAR Ontologies (Metadaten) + DITA (strukturiertes Authoring)", einheit: "Standards" },
-      { schluessel: "Transformation", wert: "Onto2Gra, OWL2DSL, Melange (Ontologie → Grammatik)", einheit: "Tools" }
-    ]
-
-    bemerkung: ?{
-      // Für fachpublikum:
-      //   Der Generische Prozess:
-      //   1. Ontologie für die Domäne finden oder erstellen
-      //   2. Ontologie → Grammatik transformieren
-      //   3. Grammatik für Kontext-Auflösung öffnen
-      //
-      // Die Domänengrammatik wird nicht erfunden — sie wird
-      // aus bestehenden Ontologien abgeleitet. Das ist der
-      // Kern des ISCRIPT-Ansatzes: Standards dem
-      // Selbsterfinden vorziehen.
-    }
-  }
-
-  // ==========================================================
-  // TEIL 8: ABSATZ — Beispiel: Lebenslauf
-  // ==========================================================
-  absatz {
-    inhalt: "Derselbe ISCRIPT-Code, drei Kontexte, drei Artefakte: Der Lebenslauf-Code (person, stationen, fähigkeiten, ziel) wird im Homepage-Kontext zu einer erzählenden HTML-Seite, im Bewerbungs-Kontext zu einem sachlichen PDF, im Autobiografie-Kontext zu einem langen Fließtext. Die Fakten — Name, Daten, Orte — bleiben in allen drei Artefakten identisch. Nur die Rahmung ändert sich."
-
+  {
+    id: "beispiel-lebenslauf"
+    fakten: "Derselbe ISCRIPT-Code, drei Kontexte, drei Artefakte: Der Lebenslauf-Code (person, stationen, fähigkeiten, ziel) wird im Homepage-Kontext zu einer erzählenden HTML-Seite, im Bewerbungs-Kontext zu einem sachlichen PDF, im Autobiografie-Kontext zu einem langen Fließtext. Die Fakten — Name, Daten, Orte — bleiben in allen drei Artefakten identisch. Nur die Rahmung ändert sich."
     kontext: ?{
       // Für fachpublikum (gewicht 5):
       //   Das Lebenslauf-Beispiel ist das intuitivste
@@ -353,70 +156,152 @@ artikel {
     }
   }
 
-  // ==========================================================
-  // TEIL 9: ABSATZ — Beispiel: Fiktive Erzählung
-  // ==========================================================
-  absatz {
-    inhalt: "In der Domäne Narration (GOLEM) bleibt die Fabula — die chronologische Ereignisfolge — stabil. Die Syuzhet — die Erzählweise — ist kontextabhängig: Derselbe Code ergibt als Roman einen linearen Text, als Drehbuch eine dialogbasierte Struktur, als Film ein visuelles Skript."
-
+  {
+    id: "beispiel-narration"
+    fakten: "In der Domäne Narration (GOLEM) bleibt die Fabula — die chronologische Ereignisfolge — stabil. Die Syuzhet — die Erzählweise — ist kontextabhängig: Derselbe Code ergibt als Roman einen linearen Text, als Drehbuch eine dialogbasierte Struktur, als Film ein visuelles Skript."
     kontext: ?{
       // Für fachpublikum:
-      //   Die Fabula/Syuzhet-Trennung (Propp, Todorov) ist
-      //   in der Narratologie etabliert. GOLEM nutzt sie
-      //   explizit. ISCRIPT überträgt dieses Muster auf
-      //   jede Domäne: Die invariante Faktenbasis bleibt
-      //   stabil, die Darstellung ist kontextabhängig.
+      //   Die Fabula/Syuzhet-Trennung (Propp, Todorov)
+      //   ist in der Narratologie etabliert. GOLEM nutzt
+      //   sie explizit. ISCRIPT überträgt dieses Muster
+      //   auf jede Domäne: Die invariante Faktenbasis
+      //   bleibt stabil, die Darstellung ist
+      //   kontextabhängig.
       //
       // Für allgemein:
-      //   Ein guter Roman hat eine feste Geschichte (Fabula)
-      //   und verschiedene Möglichkeiten, sie zu erzählen
-      //   (Syuzhet). ISCRIPT macht dasselbe mit Code:
-      //   Die Fakten bleiben gleich, die Erzählweise
+      //   Ein guter Roman hat eine feste Geschichte
+      //   (Fabula) und verschiedene Möglichkeiten, sie zu
+      //   erzählen (Syuzhet). ISCRIPT macht dasselbe mit
+      //   Code: Die Fakten bleiben gleich, die Erzählweise
       //   passt sich dem Kontext an.
     }
   }
 
-  // ==========================================================
-  // TEIL 10: ABSATZ — Offene Fragen
-  // ==========================================================
-  absatz {
-    inhalt: "Fünf Fragen bleiben offen: Wie läuft die Auflösung konkret ab? Wer verantwortet den Kontext? Wie verhindert man, dass freie Sprache Invarianten des Codes verletzt? Wie viel Struktur muss im Code stecken, damit neue Kontexte ohne neuen Code funktionieren? Wer definiert Domänengrammatiken — vorgegeben, abgeleitet oder deklariert?"
+  {
+    id: "doemänengrammatiken"
+    fakten: "Die Domänengrammatik wird nicht erfunden — sie wird aus bestehenden Ontologien abgeleitet. Das ist der Kern des ISCRIPT-Ansatzes: Standards dem Selbsterfinden vorziehen."
+    kontext: ?{
+      // Der generische Prozess:
+      // 1. Ontologie für die Domäne finden oder erstellen
+      // 2. Ontologie → Grammatik transformieren
+      // 3. Grammatik für Kontext-Auflösung öffnen
+      //
+      // Etablierte Ontologien pro Domäne:
+      // - Menschenleben: CIDOC CRM, Bio CRM, OntoLife,
+      //   OntoBio, ResumeRDF
+      // - Fiktion / Narration: GOLEM, Drammar, NOnt,
+      //   Transmedia Storytelling Ontology (TSO)
+      // - Fachpublikation: SPAR Ontologies (Metadaten) +
+      //   DITA (strukturiertes Authoring)
+      // - Website: Schema.org (strukturierte Web-Daten)
+    }
+  }
 
+  {
+    id: "syntax-elemente"
+    fakten: "ISCRIPT erweitert JavaScript um zwei Bausteine: ?{} für kontextabhängige Stellen und domain für die Domänengrammatik. Alles andere ist JavaScript."
+    eintraege [
+      { schluessel: "?{...}", wert: "Markiert eine kontextabhängige Stelle. Der Inhalt wird bei der Auflösung anhand der Kontextparameter bestimmt.", einheit: "Syntax" },
+      { schluessel: "domain", wert: "Definiert eine Domänengrammatik. Enthält Struktur, Invarianzen und Auflösungsregeln.", einheit: "Deklaration" },
+      { schluessel: "meta", wert: "Invariante Metadaten (Autor, Titel, Zitation). Unabhängig vom Artefakt-Typ.", einheit: "Metadaten" },
+      { schluessel: "inhalte", wert: "Liste der inhaltlichen Blöcke. Jeder Block hat id, fakten und kontext (?{}).", einheit: "Struktur" },
+      { schluessel: "invarianzen", wert: "Liste der faktum-Felder, die der Kontext nicht verändern darf.", einheit: "Sicherheitsmechanismus" },
+      { schluessel: "kontextparameter", wert: "Die vier Parametergruppen, die aus der Kontext-Prosa extrahiert werden: publikum, ton, laenge, fokus.", einheit: "Schnittstelle" }
+    ]
+    kontext: ?{
+      // Für fachpublikum:
+      //   Die Syntax ist bewusst minimal. ISCRIPT erfindet
+      //   keine neuen Konstrukte — es erweitert JavaScript
+      //   um zwei Dinge: ?{} für kontextabhängige Stellen
+      //   und domain für die Domänengrammatik. Alles
+      //   andere ist JavaScript.
+      //
+      // Für allgemein:
+      //   Wenn man JavaScript kann, kann man ISCRIPT
+      //   lesen. Der einzige neue Baustein ist ?{}, und
+      //   der sagt: "Hier entscheidet der Kontext."
+    }
+  }
+
+  {
+    id: "abgrenzung-typescript"
+    fakten: "TypeScript beseitigt Mehrdeutigkeit im Programmtext durch statische Typisierung. ISCRIPT löst sie kontextuell auf bei der Auflösung."
+    kontext: ?{
+      // Je nach Publikum:
+      // - Fachpublikum: Ausführliche Abgrenzung mit
+      //   Beispiel
+      // - Allgemein: Ein Satz
+      // - Homepage: Kein eigener Abschnitt, nur ein Satz
+      //   im Fließtext
+    }
+  }
+
+  {
+    id: "abgrenzung-dsl"
+    fakten: "DSLs sind domänenspezifisch und starr; ISCRIPT ist domänenspezifisch, aber durch den Kontext erweiterbar, ohne die Grammatik zu ändern."
+    kontext: ?{
+      // Je nach Publikum:
+      // - Fachpublikum: Ausführliche Abgrenzung
+      // - Allgemein: Ein Satz
+      // - Homepage: Kein eigener Abschnitt
+    }
+  }
+
+  {
+    id: "abgrenzung-template"
+    fakten: "Templates variieren Ausgabe durch Parameter; ISCRIPT variiert Ausgabe durch Prosa, nicht durch strukturierte Parameter."
+    kontext: ?{
+      // Je nach Publikum:
+      // - Fachpublikum: Ausführliche Abgrenzung
+      // - Allgemein: Ein Satz
+      // - Homepage: Kein eigener Abschnitt
+    }
+  }
+
+  {
+    id: "offene-fragen"
+    fakten: "Fünf Fragen bleiben offen: 1. Wie läuft die Auflösung konkret ab? 2. Wer verantwortet den Kontext? 3. Wie verhindert man, dass freie Sprache Invarianten des Codes verletzt? 4. Wie viel Struktur muss im Code stecken, damit neue Kontexte ohne neuen Code funktionieren? 5. Wer definiert Domänengrammatiken — vorgegeben, abgeleitet oder deklariert?"
     kontext: ?{
       // Für fachpublikum (gewicht 5):
       //   Diese fünf Fragen sind die Forschungsagenda.
       //   Der Prototyp beantwortet Frage 3 (Invarianzschutz
-      //   durch invarianzen.faktum) und Frage 1 (regelbasierte
-      //   Auflösung). Fragen 2, 4 und 5 bleiben offen für
-      //   weitere Arbeit.
+      //   durch invarianzen.faktum) und Frage 1
+      //   (regelbasierte Auflösung). Fragen 2, 4 und 5
+      //   bleiben offen für weitere Arbeit.
       //
       // Für allgemein (gewicht 3):
       //   ISCRIPT ist ein Anfang, keine fertige Lösung.
       //   Die fünf offenen Fragen zeigen, wo die Arbeit
       //   noch steht — und wo die interessanten Probleme
       //   liegen.
+      //
+      // Für Homepage (gewicht 3):
+      //   Als Ausblick, nicht als Forschungsagenda.
+      //   "Wo geht die Reise hin?"
     }
   }
 
-  // ==========================================================
-  // TEIL 11: ABSATZ — Fazit
-  // ==========================================================
-  absatz {
-    inhalt: "ISCRIPT behandelt Mehrdeutigkeit als Feature, nicht als Bug. Die Code-Ebene trägt Struktur und Fakten, die Kontext-Ebene trägt Präsentation und Absicht. Die Auflösung verbindet beide — nachvollziehbar, prüfbar, revidierbar. Der Artikel selbst ist der Prototyp: Er wurde in ISCRIPT geschrieben und mit der beschriebenen Auflösung in dieses Artefakt transformiert."
-
+  {
+    id: "fazit"
+    fakten: "ISCRIPT behandelt Mehrdeutigkeit als Feature, nicht als Bug. Die Code-Ebene trägt Struktur und Fakten, die Kontext-Ebene trägt Präsentation und Absicht. Die Auflösung verbindet beide — nachvollziehbar, prüfbar, revidierbar."
     kontext: ?{
       // Für fachpublikum (gewicht 5):
       //   Der Meta-Aspekt: Dieser Artikel ist nicht nur
-      //   über ISCRIPT — er ist ein Beispiel für ISCRIPT.
-      //   Der Code (artikel/iscrypt.isc) + der Kontext
-      //   (artikel/kontexte/fachartikel.txt) + die Auflösung
-      //   (resolver/) = dieser Artikel. Das ist die
+      //   über ISCRIPT — er ist ein Beispiel für
+      //   ISCRIPT. Der Code + der Kontext + die Auflösung
+      //   = dieses Artefakt. Das ist die
       //   Referenzimplementierung.
       //
       // Für allgemein (gewicht 3):
-      //   Der wichtigste Satz dieses Artikels ist der letzte:
-      //   Der Artikel selbst ist der Prototyp. Nicht die
-      //   Beschreibung des Prototyps — der Prototyp selbst.
+      //   Der wichtigste Satz dieses Artikels ist der
+      //   letzte: Der Artikel selbst ist der Prototyp.
+      //   Nicht die Beschreibung des Prototyps — der
+      //   Prototyp selbst.
+      //
+      // Für Homepage (gewicht 4):
+      //   Als CTA: "Den vollständigen Artikel lesen" oder
+      //   "Kontakt aufnehmen".
     }
   }
-}
+
+]

@@ -1,35 +1,67 @@
 {
-  "publikum": {
-    "typ": "fachpublikum",
-    "fachkenntnisse": 4,
-    "beschreibung": "Offline-Extraktion: fachpublikum (4/5)",
-    "sicherheit": "niedrig"
-  },
-  "ton": {
-    "stil": "kritisch",
-    "person": "erzaehlend",
-    "satzlaenge": "mittel",
-    "beschreibung": "Offline-Extraktion: kritisch, erzaehlend",
-    "sicherheit": "niedrig"
-  },
-  "laenge": {
-    "komprimierung": "kern",
-    "ziel_woerter": null,
-    "teil_anzahl": null,
-    "beschreibung": "Offline-Extraktion: kern",
-    "sicherheit": "niedrig"
-  },
-  "fokus": {
-    "gewichtung": {
-      "concept": 5,
-      "task": 4,
-      "reference": 3,
-      "absatz": 4
-    },
-    "ausschliesse": [
-      "Keine historische Einordnung (wer hat wann was erfunden)."
+  "inhalt": {
+    "these": "Sprache und löst Mehrdeutigkeit kontextuell auf — nicht durch",
+    "konzepte": [
+      "Was ist ISCRIPT?",
+      "Die Ebenen und ihre Rollen",
+      "Die Ebenen im Detail",
+      "Faktum und Rahmung",
+      "JavaScript, nicht TypeScript",
+      "Die Auflösung konkret",
+      "Beispiel: Lebenslauf",
+      "Beispiel: Fiktive Erzählung",
+      "Domänengrammatiken und Ontologien",
+      "Die ISCRIPT-Syntax-Elemente"
     ],
-    "beschreibung": "Offline-Extraktion: concept=5, task=4, reference=3, absatz=4",
+    "fakten": [
+      "ISCRIPT ist JavaScript-abwärtskompatibel",
+      "Zwei Ebenen: Code + Kontext",
+      "Auflösung ist regelbasiert",
+      "Invarianzen schützen Fakten"
+    ],
+    "Beispiele": [
+      "Lebenslauf",
+      "Narration"
+    ],
+    "offene_fragen": [
+      "Wer verantwortet den Kontext?",
+      "Wie viel Struktur im Code?",
+      "Wer definiert Domänengrammatiken?"
+    ],
+    "beschreibung": "Offline-Extraktion: 16 Konzepte",
     "sicherheit": "niedrig"
+  },
+  "form": {
+    "publikum": {
+      "typ": "allgemein",
+      "fachkenntnisse": 3,
+      "beschreibung": "Offline-Extraktion: allgemein (3/5)",
+      "sicherheit": "niedrig"
+    },
+    "ton": {
+      "stil": "erzaehlend",
+      "person": "erzaehlend",
+      "rhetorische_fragen": true,
+      "satzlaenge": "mittel",
+      "beschreibung": "Offline-Extraktion: erzaehlend, erzaehlend",
+      "sicherheit": "niedrig"
+    },
+    "laenge": {
+      "komprimierung": "kern",
+      "ziel_woerter": null,
+      "sektionen": 6,
+      "beschreibung": "Offline-Extraktion: kern, ? Wörter",
+      "sicherheit": "niedrig"
+    },
+    "fokus": {
+      "gewichtung": {},
+      "ausschliesse": [
+        "Keine DITA-Details, keine SPAR-Metadaten, keine"
+      ],
+      "beschreibung": "Offline-Extraktion: ",
+      "sicherheit": "niedrig"
+    },
+    "zielformat": "html",
+    "domaene": "website"
   }
 }

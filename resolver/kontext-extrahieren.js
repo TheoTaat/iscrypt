@@ -1,27 +1,31 @@
 #!/usr/bin/env node
 // ============================================================
-// ISCRIPT KI-Schicht (Stufe 2): Kontext → Parameter
+// ISCRIPT KI-Schicht (Stufe 2): Kontext A + Kontext B → Parameter
 //
-// Freie Sprache (vom Autor) → strukturierte Parameter (JSON)
+// Zwei Kontexte werden gelesen:
+//   - Kontext A (Inhalt): Alles über ISCRIPT an sich.
+//     Was es ist, was es leistet, welche Fakten gelten.
+//     Bleibt bei jedem Artefakt-Wechsel gleich.
+//   - Kontext B (Form): Wie das Artefakt strukturiert,
+//     aufgebaut, getönt sein soll.
+//     Wird ausgetauscht (Fachartikel, Homepage, Buch, Vortrag).
 //
-// Diese Schicht BRAUCHT KI — freie Prosa lässt sich nicht mit
-// Schlüsselwörtern verlässlich verstehen. Sie ist die EINZIGE
-// Stelle in der Pipeline, an der KI hingehört.
+// Aus beiden wird ein parameter.json mit beiden Gruppen
+// extrahiert:
+//   - inhalt: { fakten, these, konzepte, ... }
+//   - form: { publikum, ton, laenge, fokus, zielformat }
 //
 // Provider-Chain: Mistral → Moonshot (Kimi) → Anthropic
 // Fallback automatisch, wenn ein Provider schlägt.
 //
-// Ausgabe wird protokolliert (log-Datei), damit der Autor prüfen
-// kann, was verstanden wurde. Die Parameter sind korrigierbar
-// (Override-Datei).
-//
 // Aufruf:
 //   node resolver/kontext-extrahieren.js \
-//     --kontext artikel/kontexte/fachartikel.txt \
+//     --inhalt artikel/kontexte/iscrypt.inhalt.txt \
+//     --form artikel/kontexte/fachartikel.form.txt \
 //     --out out/
 //
 // Erzeugt:
-//   out/parameter.json            — extrahierte Parameter
+//   out/parameter.json            — extrahierte Parameter (Inhalt + Form)
 //   out/parameter.log             — Protokoll: Provider, Output, Sicherheit
 //   out/parameter.override.json   — (optional) manuelle Korrekturen
 // ============================================================
@@ -34,8 +38,19 @@ import { join, resolve as pathResolve } from "node:path";
 // ============================================================
 
 const SYSTEM_PROMPT = `Du bist der Kontext-Interpreter von ISCRIPT.
-Deine Aufgabe: Aus freier deutscher Prosa (geschrieben vom Autor)
-extrahierst du vier Parametergruppen als striktes JSON.
+
+Du erhältst ZWEI Kontexte vom Autor:
+
+1. **Kontext A (Inhalt)** — Alles über ISCRIPT an sich:
+   Was es ist, was es leistet, welche Fakten gelten.
+   Dieser Kontext ist artefakt-unabhängig.
+
+2. **Kontext B (Form)** — Wie das Artefakt strukturiert,
+   aufgebaut, getönt sein soll. Dieser Kontext ist
+   artefakt-abhängig (Fachartikel, Homepage, Buch, Vortrag).
+
+Deine Aufgabe: Extrahiere aus beiden Kontexten strukturierte
+Parameter als striktes JSON.
 
 Regeln:
 - Antworte NUR mit validem JSON, ohne Markdown, ohne Kommentare.
@@ -47,36 +62,57 @@ Regeln:
 
 Schema:
 {
-  "publikum": {
-    "typ": "fachpublikum" | "allgemein" | "studenten" | "management" | "experten",
-    "fachkenntnisse": 1-5,
-    "beschreibung": "eigene Zusammenfassung in 1 Satz",
+  "inhalt": {
+    "these": "Kernthese des Inhalts in 1 Satz",
+    "konzepte": ["Liste der Kernkonzepte (Kurznamen)"],
+    "fakten": ["Liste der wichtigsten invarianten Fakten"],
+    "beispiele": ["Liste der Beispiele (Kurznamen)"],
+    "offene_fragen": ["Liste der offenen Fragen"],
+    "beschreibung": "eigene Zusammenfassung des Inhalts in 1 Satz",
     "sicherheit": "hoch" | "mittel" | "niedrig"
   },
-  "ton": {
-    "stil": "sachlich" | "erzaehlend" | "ueberzeugend" | "kritisch" | "inspirierend" | "neutral",
-    "person": "ich" | "wir" | "erzaehlend",
-    "satzlaenge": "kurz" | "mittel" | "lang",
-    "beschreibung": "eigene Zusammenfassung in 1 Satz",
-    "sicherheit": "hoch" | "mittel" | "niedrig"
-  },
-  "laenge": {
-    "komprimierung": "kern" | "dicht" | "voll",
-    "ziel_woerter": number | null,
-    "teil_anzahl": number | null,
-    "beschreibung": "eigene Zusammenfassung in 1 Satz",
-    "sicherheit": "hoch" | "mittel" | "niedrig"
-  },
-  "fokus": {
-    "gewichtung": {
-      "concept": 1-5,
-      "task": 1-5,
-      "reference": 1-5,
-      "absatz": 1-5
+  "form": {
+    "publikum": {
+      "typ": "fachpublikum" | "allgemein" | "studenten" | "management" | "experten",
+      "fachkenntnisse": 1-5,
+      "beschreibung": "eigene Zusammenfassung in 1 Satz",
+      "sicherheit": "hoch" | "mittel" | "niedrig"
     },
-    "ausschliesse": ["Liste"],
-    "beschreibung": "eigene Zusammenfassung in 1 Satz",
-    "sicherheit": "hoch" | "mittel" | "niedrig"
+    "ton": {
+      "stil": "sachlich" | "erzaehlend" | "ueberzeugend" | "kritisch" | "einladend" | "inspirierend" | "neutral",
+      "person": "ich" | "wir" | "erzaehlend",
+      "rhetorische_fragen": true | false | null,
+      "satzlaenge": "kurz" | "mittel" | "lang",
+      "beschreibung": "eigene Zusammenfassung in 1 Satz",
+      "sicherheit": "hoch" | "mittel" | "niedrig"
+    },
+    "laenge": {
+      "komprimierung": "kern" | "dicht" | "voll",
+      "ziel_woerter": number | null,
+      "sektionen": number | null,
+      "beschreibung": "eigene Zusammenfassung in 1 Satz",
+      "sicherheit": "hoch" | "mittel" | "niedrig"
+    },
+    "fokus": {
+      "gewichtung": {
+        "hook": 1-5,
+        "konzept": 1-5,
+        "beispiel": 1-5,
+        "detail": 1-5,
+        "abgrenzung": 1-5,
+        "ausblick": 1-5,
+        "cta": 1-5,
+        "concept": 1-5,
+        "task": 1-5,
+        "reference": 1-5,
+        "absatz": 1-5
+      },
+      "ausschliesse": ["Liste"],
+      "beschreibung": "eigene Zusammenfassung in 1 Satz",
+      "sicherheit": "hoch" | "mittel" | "niedrig"
+    },
+    "zielformat": "markdown" | "html" | "dita-xml" | "pdf" | null,
+    "domaene": "fachpublikation" | "website" | "buch" | "vortrag" | null
   }
 }`;
 
@@ -182,76 +218,116 @@ async function callLLM(systemPrompt, userPrompt) {
 // Er ist bewusst einfach und ersetzt die KI-Schicht NICHT.
 // In Produktion muss ein LLM-Provider verfügbar sein.
 
-function offlineExtract(prosa) {
-  const lower = prosa.toLowerCase();
-  
-  // Publikum
+function offlineExtract(inhalt, form) {
+  const formLower = form.toLowerCase();
+  const inhaltLower = inhalt.toLowerCase();
+
+  // Inhalt-Parameter
+  const theseMatch = inhalt.match(/Kernthese[^\n]*\n([^\n]+)/i) ||
+                     inhalt.match(/zentrale These[^\n]*\n([^\n]+)/i);
+  const konzepte = [];
+  const konzeptLines = inhalt.split("\n");
+  for (const line of konzeptLines) {
+    const m = line.match(/^##\s+(.+)$/);
+    if (m) konzepte.push(m[1].trim());
+  }
+
+  // Form-Parameter
   let typ = "fachpublikum";
   let fachkenntnisse = 4;
-  if (lower.includes("studenten")) typ = "studenten";
-  else if (lower.includes("management")) typ = "management";
-  else if (lower.includes("allgemein")) typ = "allgemein";
-  
-  const fk = prosa.match(/fachkenntnisse:\s*(\d)\s*\/\s*5/i);
+  if (formLower.includes("studenten")) typ = "studenten";
+  else if (formLower.includes("management")) typ = "management";
+  else if (formLower.includes("allgemein") || formLower.includes("breiter")) typ = "allgemein";
+
+  const fk = form.match(/fachkenntnisse:\s*(\d)\s*\/\s*5/i);
   if (fk) fachkenntnisse = parseInt(fk[1]);
-  
-  // Ton
+
   let stil = "sachlich";
-  if (lower.includes("erzählend") || lower.includes("erzaehlend")) stil = "erzaehlend";
-  else if (lower.includes("überzeugend") || lower.includes("ueberzeugend")) stil = "ueberzeugend";
-  else if (lower.includes("kritisch")) stil = "kritisch";
-  
+  if (formLower.includes("erzählend") || formLower.includes("erzaehlend")) stil = "erzaehlend";
+  else if (formLower.includes("überzeugend") || formLower.includes("ueberzeugend")) stil = "ueberzeugend";
+  else if (formLower.includes("kritisch")) stil = "kritisch";
+  else if (formLower.includes("einladend")) stil = "einladend";
+
   let person = "erzaehlend";
-  if (lower.includes("ich-form")) person = "ich";
-  else if (lower.includes("wir-form")) person = "wir";
-  
-  // Länge
+  if (formLower.includes("ich-form") || /\bich\b.*\bform\b/i.test(formLower)) person = "ich";
+  else if (formLower.includes("wir-form") || /\bwir\b.*\bform\b/i.test(formLower)) person = "wir";
+
+  let rhetorischeFragen = null;
+  if (formLower.includes("rhetorische fragen sind erlaubt")) rhetorischeFragen = true;
+  else if (formLower.includes("keine rhetorischen fragen")) rhetorischeFragen = false;
+
   let komprimierung = "dicht";
-  if (lower.includes("kern")) komprimierung = "kern";
-  else if (lower.includes("voll")) komprimierung = "voll";
-  
-  const ziel = prosa.match(/ziel:\s*(\d[\d\s]*)\s*wörter/i);
-  
-  // Fokus
-  const gewichtung = { concept: 5, task: 4, reference: 3, absatz: 4 };
-  const gw = /(concept|task|reference|absatz)\s*:\s*Gewicht\s*(\d)/gi;
+  if (formLower.includes("kern")) komprimierung = "kern";
+  else if (formLower.includes("voll")) komprimierung = "voll";
+
+  const ziel = form.match(/ziel:\s*(\d[\d\s\-]*)\s*wörter/i);
+  const ziel2 = form.match(/ziel:\s*(\d+)\s*[-–]\s*(\d+)\s*wörter/i);
+  let zielWoerter = null;
+  if (ziel2) zielWoerter = parseInt(ziel2[1]);
+  else if (ziel) zielWoerter = parseInt(ziel[1]);
+
+  const sektionenMatch = form.match(/(\d+)\s*[-–]?\s*(\d+)?\s*Abschnitte/i) ||
+                         form.match(/(\d+)\s*Teile/i);
+  let sektionen = null;
+  if (sektionenMatch) sektionen = parseInt(sektionenMatch[1]);
+
+  let zielformat = null;
+  let domaene = null;
+  if (formLower.includes("html")) zielformat = "html";
+  if (formLower.includes("markdown") || formLower.includes("fachartikel")) { zielformat = "markdown"; domaene = "fachpublikation"; }
+  if (formLower.includes("homepage") || formLower.includes("website")) { zielformat = "html"; domaene = "website"; }
+
+  const gewichtung = {};
+  const gw = /(\w+)\s*:\s*Gewicht\s*(\d)/gi;
   let m;
-  while ((m = gw.exec(prosa)) !== null) {
+  while ((m = gw.exec(form)) !== null) {
     gewichtung[m[1].toLowerCase()] = parseInt(m[2]);
   }
-  
+
   const ausschliesse = [];
-  const ausMatch = prosa.match(/Ausschluss:\s*(.+)/i);
-  if (ausMatch) {
-    ausschliesse.push(ausMatch[1].trim());
-  }
-  
+  const ausMatch = form.match(/Ausschluss:\s*(.+)/i);
+  if (ausMatch) ausschliesse.push(ausMatch[1].trim());
+
   return {
-    publikum: {
-      typ,
-      fachkenntnisse,
-      beschreibung: `Offline-Extraktion: ${typ} (${fachkenntnisse}/5)`,
-      sicherheit: "niedrig"  // Offline-Modus ist weniger verlässlich
-    },
-    ton: {
-      stil,
-      person,
-      satzlaenge: "mittel",
-      beschreibung: `Offline-Extraktion: ${stil}, ${person}`,
+    inhalt: {
+      these: theseMatch ? theseMatch[1].trim() : "ISCRIPT verbindet formale Code-Struktur mit freier Sprache und löst Mehrdeutigkeit kontextuell auf.",
+      konzepte: konzepte.slice(0, 10),
+      fakten: ["ISCRIPT ist JavaScript-abwärtskompatibel", "Zwei Ebenen: Code + Kontext", "Auflösung ist regelbasiert", "Invarianzen schützen Fakten"],
+      Beispiele: ["Lebenslauf", "Narration"],
+      offene_fragen: ["Wer verantwortet den Kontext?", "Wie viel Struktur im Code?", "Wer definiert Domänengrammatiken?"],
+      beschreibung: `Offline-Extraktion: ${konzepte.length} Konzepte`,
       sicherheit: "niedrig"
     },
-    laenge: {
-      komprimierung,
-      ziel_woerter: ziel ? parseInt(ziel[1]) : null,
-      teil_anzahl: null,
-      beschreibung: `Offline-Extraktion: ${komprimierung}`,
-      sicherheit: "niedrig"
-    },
-    fokus: {
-      gewichtung,
-      ausschliesse,
-      beschreibung: `Offline-Extraktion: ${Object.entries(gewichtung).map(([k,v]) => `${k}=${v}`).join(", ")}`,
-      sicherheit: "niedrig"
+    form: {
+      publikum: {
+        typ,
+        fachkenntnisse,
+        beschreibung: `Offline-Extraktion: ${typ} (${fachkenntnisse}/5)`,
+        sicherheit: "niedrig"
+      },
+      ton: {
+        stil,
+        person,
+        rhetorische_fragen: rhetorischeFragen,
+        satzlaenge: "mittel",
+        beschreibung: `Offline-Extraktion: ${stil}, ${person}`,
+        sicherheit: "niedrig"
+      },
+      laenge: {
+        komprimierung,
+        ziel_woerter: zielWoerter,
+        sektionen,
+        beschreibung: `Offline-Extraktion: ${komprimierung}, ${zielWoerter || "?"} Wörter`,
+        sicherheit: "niedrig"
+      },
+      fokus: {
+        gewichtung,
+        ausschliesse,
+        beschreibung: `Offline-Extraktion: ${Object.entries(gewichtung).map(([k, v]) => `${k}=${v}`).join(", ")}`,
+        sicherheit: "niedrig"
+      },
+      zielformat,
+      domaene
     }
   };
 }
@@ -291,28 +367,44 @@ async function main() {
   const args = process.argv.slice(2);
   const get = f => { const i = args.indexOf(f); return i !== -1 && i + 1 < args.length ? args[i + 1] : null; };
 
-  const kontextPath = get("--kontext");
+  const inhaltPath = get("--inhalt");
+  const formPath = get("--form");
   const outPath = get("--out") || "out";
 
-  if (!kontextPath) {
-    console.error("Nutzung: node resolver/kontext-extrahieren.js --kontext <.txt> --out <dir>");
+  if (!inhaltPath || !formPath) {
+    console.error("Nutzung: node resolver/kontext-extrahieren.js --inhalt <inhalt.txt> --form <form.txt> --out <dir>");
+    console.error("  --inhalt: Kontext A (Inhalt, artefakt-unabhängig)");
+    console.error("  --form:   Kontext B (Form, artefakt-abhängig)");
     process.exit(1);
   }
 
-  const kontext = readFileSync(pathResolve(kontextPath), "utf-8");
+  const inhalt = readFileSync(pathResolve(inhaltPath), "utf-8");
+  const form = readFileSync(pathResolve(formPath), "utf-8");
   mkdirSync(pathResolve(outPath), { recursive: true });
 
-  console.log("ISCRIPT KI-Schicht (Stufe 2): Kontext → Parameter");
-  console.log("==============================================");
-  console.log(`Kontext: ${kontextPath}`);
-  console.log(`Wörter: ${kontext.split(/\s+/).filter(Boolean).length}`);
+  console.log("ISCRIPT KI-Schicht (Stufe 2): Kontext A + B → Parameter");
+  console.log("========================================================");
+  console.log(`Kontext A (Inhalt): ${inhaltPath}`);
+  console.log(`Kontext B (Form):   ${formPath}`);
+  console.log(`Wörter A: ${inhalt.split(/\s+/).filter(Boolean).length}`);
+  console.log(`Wörter B: ${form.split(/\s+/).filter(Boolean).length}`);
   console.log("");
 
   // LLM-Aufruf mit Provider-Chain
   console.log("[1/3] LLM-Aufruf (Provider-Chain: Mistral → Kimi → Claude) ...");
+  const userPrompt = `Hier sind die beiden Kontexte des Autors:
+
+=== KONTTEXT A (INHALT) ===
+${inhalt}
+
+=== KONTTEXT B (FORM) ===
+${form}
+
+Extrahiere die Parameter gemäß Schema.`;
+
   let rawOutput, params, providerUsed;
   try {
-    const result = await callLLM(SYSTEM_PROMPT, `Hier ist der Kontext des Autors:\n\n${kontext}`);
+    const result = await callLLM(SYSTEM_PROMPT, userPrompt);
     rawOutput = result.text;
     providerUsed = result.providerName;
   } catch (err) {
@@ -320,7 +412,7 @@ async function main() {
     console.log("");
     console.log("      → Kein LLM verfügbar. Weiche auf Offline-Extraktion aus.");
     console.log("        (Nur für Testen — in Produktion muss ein LLM-Provider verfügbar sein.)");
-    params = offlineExtract(kontext);
+    params = offlineExtract(inhalt, form);
     rawOutput = "[OFFLINE-MODUS] Kein LLM erreichbar. Regelbasierte Extraktion statt KI.";
     providerUsed = "offline (regelbasiert)";
   }
@@ -349,10 +441,17 @@ async function main() {
 
   // Validierung
   console.log("[3/3] Validieren + schreiben ...");
-  const required = ["publikum", "ton", "laenge", "fokus"];
-  for (const r of required) {
-    if (!params[r]) {
-      console.error(`      ✗ Fehlt: ${r}`);
+  if (!params.inhalt) {
+    console.error("      ✗ Fehlt: inhalt");
+    process.exit(1);
+  }
+  if (!params.form) {
+    console.error("      ✗ Fehlt: form");
+    process.exit(1);
+  }
+  for (const r of ["publikum", "ton", "laenge", "fokus"]) {
+    if (!params.form[r]) {
+      console.error(`      ✗ Fehlt: form.${r}`);
       process.exit(1);
     }
   }
@@ -367,7 +466,8 @@ async function main() {
     `# Protokoll: KI-Extraktion (Stufe 2)`,
     ``,
     `**Zeit:** ${new Date().toISOString()}`,
-    `**Kontext-Datei:** ${kontextPath}`,
+    `**Kontext A (Inhalt):** ${inhaltPath}`,
+    `**Kontext B (Form):** ${formPath}`,
     `**Provider:** ${providerUsed}`,
     ``,
     `## Extrahierte Parameter`,
@@ -378,10 +478,11 @@ async function main() {
     ``,
     `## Sicherheit`,
     ``,
-    `- Publikum: ${params.publikum.sicherheit || "n/a"}`,
-    `- Ton: ${params.ton.sicherheit || "n/a"}`,
-    `- Länge: ${params.laenge.sicherheit || "n/a"}`,
-    `- Fokus: ${params.fokus.sicherheit || "n/a"}`,
+    `- Inhalt: ${params.inhalt.sicherheit || "n/a"}`,
+    `- Form/Publikum: ${params.form.publikum.sicherheit || "n/a"}`,
+    `- Form/Ton: ${params.form.ton.sicherheit || "n/a"}`,
+    `- Form/Länge: ${params.form.laenge.sicherheit || "n/a"}`,
+    `- Form/Fokus: ${params.form.fokus.sicherheit || "n/a"}`,
     ``,
     `## Roh-Output des LLM (unverändert)`,
     ``,
@@ -405,11 +506,14 @@ async function main() {
   console.log(`      → ${paramFile}`);
   console.log(`      → ${logFile}`);
   console.log("");
-  console.log(`    Publikum: ${params.publikum.typ} (${params.publikum.fachkenntnisse}/5) — ${params.publikum.sicherheit}`);
-  console.log(`    Ton: ${params.ton.stil}, Person: ${params.ton.person} — ${params.ton.sicherheit}`);
-  console.log(`    Länge: ${params.laenge.komprimierung}, ${params.laenge.ziel_woerter || "?"} Wörter — ${params.laenge.sicherheit}`);
-  const gw = Object.entries(params.fokus.gewichtung || {});
-  if (gw.length) console.log(`    Fokus: ${gw.map(([k, v]) => `${k}=${v}`).join(", ")} — ${params.fokus.sicherheit}`);
+  console.log(`    Inhalt: ${params.inhalt.beschreibung} — ${params.inhalt.sicherheit}`);
+  console.log(`    Form:   ${params.form.publikum.typ} (${params.form.publikum.fachkenntnisse}/5) — ${params.form.publikum.sicherheit}`);
+  console.log(`    Ton:    ${params.form.ton.stil}, Person: ${params.form.ton.person} — ${params.form.ton.sicherheit}`);
+  console.log(`    Länge:  ${params.form.laenge.komprimierung}, ${params.form.laenge.ziel_woerter || "?"} Wörter — ${params.form.laenge.sicherheit}`);
+  const gw = Object.entries(params.form.fokus.gewichtung || {});
+  if (gw.length) console.log(`    Fokus:  ${gw.map(([k, v]) => `${k}=${v}`).join(", ")} — ${params.form.fokus.sicherheit}`);
+  if (params.form.zielformat) console.log(`    Zielformat: ${params.form.zielformat}`);
+  if (params.form.domaene) console.log(`    Domäne:   ${params.form.domaene}`);
   console.log("");
   console.log("Fertig. Der Resolver (Stufe 3) kann jetzt mit parameter.json arbeiten.");
 }

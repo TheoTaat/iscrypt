@@ -1,0 +1,234 @@
+// ============================================================
+// ISCRIPT Domänengrammatik: Website
+// Datei: domains/website/grammatik.isc
+//
+// Grundlage:
+//   - Schema.org (strukturierte Web-Daten)
+//     https://schema.org/
+//   - Web-Design-Prinzipien (Zielformat: HTML)
+//
+// Diese Grammatik definiert, WAS eine Homepage strukturell ist.
+// Sie sagt NICHT, wie sie klingt — das ist die Sache des Kontexts.
+//
+// Zielformat: HTML (einfache, semantische Seite)
+// ============================================================
+
+domain website {
+
+  // ----------------------------------------------------------
+  // METADATEN (Schema.org-basiert)
+  // ----------------------------------------------------------
+  // Schema.org: Person, CreativeWork, AboutPage
+  // Diese Felder sind invariant (faktum) — der Kontext darf sie
+  // nicht verändern, nur präsentieren.
+
+  meta: {
+    // Schema.org: Person
+    autor: string,            // Schema.org: Person.name
+    organisation: string?,    // Schema.org: Organization
+    affiliation: string?,     // Schema.org: Person.affiliation
+    // Schema.org: CreativeWork
+    titel: string,            // Schema.org: CreativeWork.name
+    untertitel: string?,      // Schema.org: CreativeWork.slogan
+    sprache: string,          // ISO 639-1
+    zitation: string?,        // Schema.org: CreativeWork.citation
+    ort: string?              // Schema.org: Place
+  }
+
+  // ----------------------------------------------------------
+  // SEITENSTRUKTUR (Website-basiert)
+  // ----------------------------------------------------------
+  // Eine Homepage besteht aus einer Folge von Sektionen.
+  // Jede Sektion hat eine rhetorische Funktion, die durch
+  // den Kontext B (Form) bestimmt wird.
+
+  seite {
+    titel: string,            // Seiten-Titel (<title>)
+    these: string,            // Kernbotschaft in einem Satz
+
+    sektionen [
+      // Einleitung / Hook
+      hook {
+        id: string,
+        fakten: string,
+        kontext: ?{}          // Wie wird der Hook formuliert?
+      },
+
+      // Kernkonzept
+      konzept {
+        id: string,
+        fakten: string,
+        kontext: ?{}          // Wie wird das Konzept erklärt?
+      },
+
+      // Beispiel / Story
+        id: string,
+        fakten: string,
+        kontext: ?{}          // Wie wird das Beispiel erzählt?
+      },
+
+      // Detail / Nachschlagewerk
+      detail {
+        id: string,
+        fakten: string,
+        eintraege [
+          { schluessel: string,
+            wert: string,
+            einheit: string? }
+        ],
+        kontext: ?{}          // Wie wird das Detail präsentiert?
+      },
+
+      // Abgrenzung
+      abgrenzung {
+        id: string,
+        fakten: string,
+        kontext: ?{}          // Wie wird die Abgrenzung formuliert?
+      },
+
+      // Ausblick / Offene Fragen
+      ausblick {
+        id: string,
+        fakten: string,
+        kontext: ?{}          // Wie wird der Ausblick formuliert?
+      },
+
+      // CTA (Call to Action)
+      cta {
+        id: string,
+        fakten: string,
+        kontext: ?{}          // Wie wird der CTA formuliert?
+      }
+    ]
+
+    // ----------------------------------------------------------
+    // KONTINGENTIERUNG (Invariantensicherung)
+    // ----------------------------------------------------------
+    invarianzen {
+      // Diese Felder sind faktum — der Kontext darf sie nur
+      // auswählen/presentieren, aber nie verändern:
+      faktum: [
+        "meta.autor",
+        "meta.organisation",
+        "meta.titel",
+        "meta.untertitel",
+        "meta.zitation",
+        "seite.sektionen[].fakten",
+        "seite.sektionen[].detail.eintraege[].wert"
+      ]
+      // Der Kontext KANN beeinflussen:
+      rahmung: [
+        "seite.sektionen[].kontext",
+        "seite.sektionen[].hook.kontext",
+        "seite.sektionen[].konzept.kontext",
+        "seite.sektionen[].abgrenzung.kontext",
+        "seite.sektionen[].ausblick.kontext",
+        "seite.sektionen[].cta.kontext"
+      ]
+    }
+  }
+
+  // ----------------------------------------------------------
+  // KONTIX-PARAMETER (was der Kontext steuern kann)
+  // ----------------------------------------------------------
+  // Diese Parameter werden aus dem freien Kontexttext extrahiert
+  // und steuern die Auflösung. Sie sind die Schnittstelle
+  // zwischen freier Sprache und Struktur.
+
+  kontextparameter {
+    // Publikum: wer liest die Seite?
+    publikum: {
+      typ: "fachpublikum"|"allgemein"|"studenten"|"management",
+      fachkenntnisse: 1..5    // 1=Laie, 5=Experte
+    },
+    // Ton: wie klingt die Seite?
+    ton: {
+      stil: "sachlich"|"erzaehlend"|"ueberzeugend"|"kritisch"|"einladend",
+      person: "ich"|"wir"|"erzaehlend",  // Ich-Form, Wir-Form, Erzähler
+      rhetorische_fragen: bool?  // Sind rhetorische Fragen erlaubt?
+    },
+    // Länge: wie ausführlich?
+    laenge: {
+      ziel_woerter: number?,  // z.B. 800-1200
+      sektionen: number?,     // Anzahl der H2-Sektionen
+      komprimierung: "voll"|"dicht"|"kern"
+    },
+    // Fokus: worauf konzentrieren?
+    fokus: {
+      gewichtung: [           // Priorisierung der Sektions-Typen
+        { sektion: "hook"|"konzept"|"beispiel"|"detail"|"abgrenzung"|"ausblick"|"cta",
+          gewicht: 1..5 }
+      ],
+      ausschließe: string?   // Was soll bewusst weggelassen werden?
+    },
+    // Zielformat:
+    zielformat: "html"        // Fest für Website-Domäne
+  }
+
+  // ----------------------------------------------------------
+  // AUFLÖSUNGSREGELN (minimale, regelbasierte Logik)
+  // ----------------------------------------------------------
+  // Diese Regeln steuern, wie Code + Kontext → Artefakt.
+  // Sie sind deterministisch und nachvollziehbar.
+
+  auflösung {
+    // Regel 1: Fakten sind invariant — Kontext darf sie nur
+    // präsentieren, nie verändern.
+    regel("fakten_invariant") {
+      bedingung:  seite.sektionen[].fakten ist gesetzt
+      aktion:     kontext darf fakten nur durch kontext ergänzen
+      verletzung: auflösung schlägt fehl mit "Invarianz verletzt: fakten"
+    }
+
+    // Regel 2: Metadaten sind invariant
+    regel("metadaten_invariant") {
+      bedingung:  meta.autor UND meta.titel sind gesetzt
+      aktion:     kontext darf Metadaten nur formatieren
+      verletzung: auflösung schlägt fehl mit "Invarianz verletzt: meta"
+    }
+
+    // Regel 3: Kontext-Priorisierung — Sektionen mit höherem
+    // Gewicht erscheinen zuerst und ausführlicher
+    regel("fokus_prioritaet") {
+      bedingung:  kontextparameter.fokus.gewichtung ist gesetzt
+      aktion:     sektionen werden nach gewicht sortiert;
+                  sektionen mit gewicht ≥ 4 erhalten ausführliche
+                  Behandlung; sektionen mit gewicht ≤ 2 werden
+                  komprimiert oder weggelassen
+    }
+
+    // Regel 4: Komprimierungsgrad bestimmt, wie viel Kontext
+    // in den Output fließt
+    regel("komprimierung") {
+      bedingung:  kontextparameter.laenge.komprimierung ist gesetzt
+      aktion:
+        "voll"  → alle ?{}-Felder vollständig aufgelöst
+        "dicht" → ?{}-Felder: nur Kerninformationen
+        "kern"  → ?{}-Felder: auf maximal 1 Satz pro Feld reduziert
+    }
+
+    // Regel 5: Ton steuert Satzbau und Wortschatz
+    regel("ton_satzbau") {
+      bedingung:  kontextparameter.ton.stil ist gesetzt
+      aktion:
+        "sachlich"      → kurze Sätze, aktive Verbform, keine Füllwörter
+        "erzaehlend"    → längere Sätze, Beispiele, Anekdote erlaubt
+        "ueberzeugend"  → Appell-Satzform, rhetorische Fragen erlaubt
+        "einladend"     → direkte Ansprache, "du"-Form erlaubt
+        "kritisch"      → Gegenpositionen werden explizit benannt
+    }
+
+    // Regel 6: Zielformat bestimmt das HTML-Element
+    regel("zielformat_html") {
+      bedingung:  kontextparameter.zielformat ist "html"
+      aktion:
+        hook      → <section class="hook"> + <h1> + <p>
+        konzept   → <section class="konzept"> + <h2> + <p>
+        beispiel  → <section class="beispiel"> + <h2> + <p>
+        detail    → <section class="detail"> + <h2> + <table>
+        abgrenzung→ <section class="abgrenzung"> + <h2> + <p>
+        ausblick  → <section class="ausblick"> + <h2> + <p>
+        cta       → <section class="cta"> + <h2> + <a href>
+    }
+  }
+}

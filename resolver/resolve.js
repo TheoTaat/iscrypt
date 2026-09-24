@@ -1,6 +1,7 @@
 // ============================================================
 // ISCRIPT Resolver (Stufe 3) — regelbasiert, nachvollziehbar
-// Parameter (.json) + Code (.isc) → Artikel (Markdown)
+// Domänenneutraler Code + Parameter (Kontext A + B) + Domänen-
+// grammatik → Artefakt im Zielformat
 //
 // Ebene 4: Das Artefakt wird in zwei Schichten geteilt:
 //   - artikel.generiert.md   → wird bei jedem Lauf überschrieben
@@ -11,6 +12,7 @@
 //   node resolver/resolve.js \
 //     --code artikel/iscrypt.isc \
 //     --parameter out/parameter.json \
+//     --domaene fachpublikation \
 //     --out out/
 // ============================================================
 
@@ -18,34 +20,32 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, resolve as pathResolve } from "node:path";
 
 // ============================================================
-// PARSER
+// PARSER: Domänenneutraler Code
 // ============================================================
 
 function parseIsc(source) {
   const ast = {
-    spar: {},
-    artikel: { titel: null, thes: null, teile: [] },
+    meta: {},
+    eintraege: [],
     _blocks: []
   };
 
   const lines = source.split("\n").map(l => l.trim());
 
   let i = 0;
-  let section = null; // "spar" | "artikel"
-  let currentTeil = null;
+  let section = null; // "meta" | "inhalte"
+  let currentBlock = null;
   let inContext = false;
   let contextBuffer = [];
   let contextKey = "";
-  let sparSub = null;
+  let inEintraege = false;
+  let eintraegeBuffer = [];
 
   while (i < lines.length) {
     const line = lines[i];
     i++;
 
-    // Skip empty lines
-    if (!line) continue;
-
-    // Context block content (inside ?{...})
+    // Context block content (inside ?{...}) — including comments
     if (inContext) {
       if (line === "}" || line === "},") {
         ast._blocks.push({ key: contextKey, content: contextBuffer.join("\n").trim() });
@@ -53,108 +53,106 @@ function parseIsc(source) {
         contextBuffer = [];
         continue;
       }
-      contextBuffer.push(line);
+      if (line) contextBuffer.push(line);
       continue;
     }
 
-    // Sektion: spar
-    if (line === "spar {") {
-      section = "spar";
-      continue;
-    }
+    // Skip empty lines and comments (outside context blocks)
+    if (!line || line.startsWith("//")) continue;
 
-    // Sektion: artikel
-    if (line === "artikel {") {
-      section = "artikel";
-      continue;
-    }
-
-    // Spar parsing
-    if (section === "spar") {
-      const subMatch = line.match(/^(\w+)\s*\{\s*$/);
-      if (subMatch) {
-        sparSub = subMatch[1];
-        ast.spar[sparSub] = {};
+    // Eintraege array content
+    if (inEintraege) {
+      if (line === "]" || line === "],") {
+        inEintraege = false;
+        if (currentBlock) {
+          currentBlock.eintraege = eintraegeBuffer;
+        }
+        eintraegeBuffer = [];
         continue;
       }
+      const entryMatch = line.match(/\{\s*schluessel\s*:\s*"([^"]*)"\s*,\s*wert\s*:\s*"([^"]*)"\s*,\s*einheit\s*:\s*"([^"]*)"\s*\}/);
+      if (entryMatch) {
+        eintraegeBuffer.push({
+          schluessel: entryMatch[1],
+          wert: entryMatch[2],
+          einheit: entryMatch[3]
+        });
+      }
+      continue;
+    }
+
+    // Sektion: meta
+    if (line === "meta {") {
+      section = "meta";
+      continue;
+    }
+
+    // Sektion: inhalt
+    if (line === "inhalte [") {
+      section = "inhalte";
+      continue;
+    }
+
+    // Meta parsing
+    if (section === "meta") {
       if (line === "}" || line === "},") {
-        if (sparSub) sparSub = null;
-        else section = null;
+        section = null;
         continue;
       }
       const pairMatch = line.match(/^(\w+)\s*:\s*(.+),?\s*$/);
-      if (pairMatch && sparSub) {
+      if (pairMatch) {
         const key = pairMatch[1];
         let val = pairMatch[2].trim().replace(/,$/, "");
         if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-        ast.spar[sparSub][key] = val;
+        ast.meta[key] = val;
       }
       continue;
     }
 
-    // Artikel parsing
-    if (section !== "artikel") continue;
+    // Inhalt parsing
+    if (section !== "inhalte") continue;
 
-    // Titel
-    const titelMatch = line.match(/^titel\s*:\s*(.+),?\s*$/);
-    if (titelMatch) {
-      let val = titelMatch[1].trim().replace(/,$/, "");
-      if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-      ast.artikel.titel = val;
-      continue;
-    }
-
-    // These
-    const theseMatch = line.match(/^these\s*:\s*(.+),?\s*$/);
-    if (theseMatch) {
-      let val = theseMatch[1].trim().replace(/,$/, "");
-      if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-      ast.artikel.thes = val;
-      continue;
-    }
-
-    // Neue Teil
-    const conceptMatch = line.match(/^concept\s*\{\s*$/);
-    if (conceptMatch) {
-      currentTeil = { typ: "concept", name: null, definition: null };
-      continue;
-    }
-    const taskMatch = line.match(/^task\s*\{\s*$/);
-    if (taskMatch) {
-      currentTeil = { typ: "task", name: null, vorraussetzung: null, schritte: [] };
-      continue;
-    }
-    const refMatch = line.match(/^reference\s*\{\s*$/);
-    if (refMatch) {
-      currentTeil = { typ: "reference", name: null, eintraege: [] };
-      continue;
-    }
-    const absMatch = line.match(/^absatz\s*\{\s*$/);
-    if (absMatch) {
-      currentTeil = { typ: "absatz", inhalt: null };
+    // Neue Block
+    const blockStart = line.match(/^\{\s*$/);
+    if (blockStart) {
+      currentBlock = { id: null, fakten: null, kontext: null, eintraege: [] };
+      ast.eintraege.push(currentBlock);
       continue;
     }
 
     // Context block start: key: ?{
     const ctxMatch = line.match(/^(\w+)\s*:\s*\?\{\s*$/);
-    if (ctxMatch && currentTeil) {
+    if (ctxMatch && currentBlock) {
       inContext = true;
       contextKey = ctxMatch[1];
       contextBuffer = [];
       continue;
     }
 
-    // Teil-Ende
+    // Eintraege array start
+    const eintraegeStart = line.match(/^eintraege\s*\[\s*$/);
+    if (eintraegeStart && currentBlock) {
+      inEintraege = true;
+      eintraegeBuffer = [];
+      continue;
+    }
+
+    // Block-Ende
     if (line === "}" || line === "},") {
-      if (currentTeil) {
-        ast.artikel.teile.push(currentTeil);
-        currentTeil = null;
+      if (currentBlock) {
+        currentBlock = null;
       }
       continue;
     }
 
-    // Key-Value in Teil
-    if (!currentTeil) continue;
+    // Array-Ende
+    if (line === "]" || line === "],") {
+      section = null;
+      continue;
+    }
+
+    // Key-Value in Block
+    if (!currentBlock) continue;
     const kvMatch = line.match(/^(\w+)\s*:\s*(.+),?\s*$/);
     if (!kvMatch) continue;
     const key = kvMatch[1];
@@ -162,53 +160,10 @@ function parseIsc(source) {
     if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
     if (val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1);
 
-    if (key === "name") currentTeil.name = val;
-    else if (key === "definition") currentTeil.definition = val;
-    else if (key === "inhalt") currentTeil.inhalt = val;
-    else if (key === "vorraussetzung") currentTeil.vorraussetzung = val || null;
-    else if (key === "schritte") {
-      // Multi-line array: collect until ]
-      let arrStr = val;
-      let depth = 1;
-      while (depth > 0 && i < lines.length) {
-        const next = lines[i];
-        for (const ch of next) { if (ch === "[") depth++; if (ch === "]") depth--; }
-        arrStr += "\n" + next;
-        i++;
-        if (depth <= 0) break;
-      }
-      // Parse steps
-      const steps = [];
-      const stepPattern = /\{\s*anleitung\s*:\s*"([^"]*)"\s*,\s*ergebnis\s*:\s*"([^"]*)"\s*\}/g;
-      let m;
-      while ((m = stepPattern.exec(arrStr)) !== null) {
-        steps.push({ anleitung: m[1], ergebnis: m[2] });
-      }
-      if (steps.length === 0) {
-        const stepPattern2 = /\{\s*anleitung\s*:\s*"([^"]*)"\s*\}/g;
-        while ((m = stepPattern2.exec(arrStr)) !== null) {
-          steps.push({ anleitung: m[1], ergebnis: null });
-        }
-      }
-      currentTeil.schritte = steps;
-    }
-    else if (key === "eintraege") {
-      // Multi-line array: collect until ]
-      let arrStr = val;
-      let depth = 1;
-      while (depth > 0 && i < lines.length) {
-        const next = lines[i];
-        for (const ch of next) { if (ch === "[") depth++; if (ch === "]") depth--; }
-        arrStr += "\n" + next;
-        i++;
-        if (depth <= 0) break;
-      }
-      const entries = [];
-      const entryPattern = /\{\s*schluessel\s*:\s*"([^"]*)"\s*,\s*wert\s*:\s*"([^"]*)"\s*,\s*einheit\s*:\s*"([^"]*)"\s*\}/g;
-      while ((m = entryPattern.exec(arrStr)) !== null) {
-        entries.push({ schluessel: m[1], wert: m[2], einheit: m[3] });
-      }
-      currentTeil.eintraege = entries;
+    if (key === "id") currentBlock.id = val;
+    else if (key === "fakten") currentBlock.fakten = val;
+    else if (key === "kontext" && val === "?{") {
+      // Handled by ctxMatch above
     }
   }
 
@@ -216,62 +171,38 @@ function parseIsc(source) {
 }
 
 // ============================================================
-// KONTTEXT-EXTRAKTION
+// KONTTEXT-EXTRAKTION (Offline-Fallback für Stufe 3)
 // ============================================================
 
-function extractKontext(prosa) {
-  const params = {
-    publikum: { typ: "fachpublikum", fachkenntnisse: 4 },
-    ton: { stil: "sachlich", person: "erzaehlend" },
-    laenge: { komprimierung: "dicht", ziel: null },
-    fokus: { gewichtung: {}, ausschliesse: null }
-  };
-  const lower = prosa.toLowerCase();
-
-  if (lower.includes("studenten")) params.publikum.typ = "studenten";
-  else if (lower.includes("management")) params.publikum.typ = "management";
-  else if (lower.includes("allgemein")) params.publikum.typ = "allgemein";
-
-  const fk = prosa.match(/fachkenntnisse:\s*(\d)\s*\/\s*5/i);
-  if (fk) params.publikum.fachkenntnisse = parseInt(fk[1]);
-
-  if (lower.includes("erzählend") || lower.includes("erzaehlend")) params.ton.stil = "erzaehlend";
-  else if (lower.includes("überzeugend") || lower.includes("ueberzeugend")) params.ton.stil = "ueberzeugend";
-  else if (lower.includes("kritisch")) params.ton.stil = "kritisch";
-  else params.ton.stil = "sachlich";
-
-  if (lower.includes("ich-form") || /\bich\b.*\bform\b/i.test(lower)) params.ton.person = "ich";
-  else if (lower.includes("wir-form") || /\bwir\b.*\bform\b/i.test(lower)) params.ton.person = "wir";
-  else params.ton.person = "erzaehlend";
-
-  if (lower.includes("kern")) params.laenge.komprimierung = "kern";
-  else if (lower.includes("dicht")) params.laenge.komprimierung = "dicht";
-  else params.laenge.komprimierung = "voll";
-
-  const ziel = prosa.match(/ziel:\s*(\d[\d\s]*)\s*wörter/i);
-  if (ziel) params.laenge.ziel = ziel[1].trim();
-
-  const gw = /(\w+)\s*:\s*Gewicht\s*(\d)/gi;
-  let m;
-  while ((m = gw.exec(prosa)) !== null) {
-    params.fokus.gewichtung[m[1].toLowerCase()] = parseInt(m[2]);
+function extractKontext(params) {
+  // params kommt jetzt aus Stufe 2 (parameter.json)
+  // Wenn nicht vorhanden, Offline-Extraktion
+  if (params.form && params.inhalt) {
+    return params;
   }
-
-  const aus = prosa.match(/Ausschluss:\s*(.+)/i);
-  if (aus) params.fokus.ausschliesse = aus[1].trim();
-
-  return params;
+  // Fallback: leere Parameter
+  return {
+    inhalt: { these: null, konzepte: [], fakten: [], Beispiele: [], offene_fragen: [], beschreibung: null, sicherheit: "niedrig" },
+    form: {
+      publikum: { typ: "fachpublikum", fachkenntnisse: 4, beschreibung: null, sicherheit: "niedrig" },
+      ton: { stil: "sachlich", person: "erzaehlend", rhetorische_fragen: null, satzlaenge: "mittel", beschreibung: null, sicherheit: "niedrig" },
+      laenge: { komprimierung: "dicht", ziel_woerter: null, sektionen: null, beschreibung: null, sicherheit: "niedrig" },
+      fokus: { gewichtung: {}, ausschliesse: [], beschreibung: null, sicherheit: "niedrig" },
+      zielformat: "markdown",
+      domaene: "fachpublikation"
+    }
+  };
 }
 
 // ============================================================
 // INvarianzprüfung
 // ============================================================
 
-function checkInvarianzen(kontextParams) {
+function checkInvarianzen(params) {
   const verletzungen = [];
-  const ok = ["publikum", "ton", "laenge", "fokus"];
-  for (const k of Object.keys(kontextParams)) {
-    if (!ok.includes(k)) verletzungen.push({ feld: k });
+  const okKeys = ["inhalt", "form"];
+  for (const k of Object.keys(params)) {
+    if (!okKeys.includes(k)) verletzungen.push({ feld: k });
   }
   return { ok: verletzungen.length === 0, verletzungen };
 }
@@ -280,8 +211,8 @@ function checkInvarianzen(kontextParams) {
 // AUFLÖSUNG: ?{}-Blöcke
 // ============================================================
 
-function resolveBlock(block, kontextParams) {
-  const { komprimierung } = kontextParams.laenge;
+function resolveBlock(block, params) {
+  const { komprimierung } = params.form.laenge;
 
   const lines = block.content
     .split("\n")
@@ -303,61 +234,107 @@ function resolveBlock(block, kontextParams) {
 }
 
 // ============================================================
-// MARKDOWN
+// MARKDOWN (Fachpublikation)
 // ============================================================
 
-function toMarkdown(ast, kontextParams, resolvedBlocks) {
+function toMarkdown(ast, params, resolvedBlocks) {
   const md = [];
-  const a = ast.artikel;
+  const meta = ast.meta;
 
-  if (a.titel) { md.push(`# ${a.titel}`); md.push(""); }
-  if (a.thes) { md.push(`> ${a.thes}`); md.push(""); }
+  if (meta.titel) { md.push(`# ${meta.titel}`); md.push(""); }
+  if (meta.untertitel) { md.push(`> ${meta.untertitel}`); md.push(""); }
 
-  const spar = ast.spar;
-  if (spar.autor || spar.publikation) {
+  if (meta.autor || meta.organisation) {
     md.push("---"); md.push("");
-    if (spar.autor?.name) md.push(`**Autor:** ${spar.autor.name}${spar.autor.organisation ? ", " + spar.autor.organisation : ""}`);
-    if (spar.publikation?.zeitraum?.von) md.push(`**Datum:** ${spar.publikation.zeitraum.von}`);
-    if (spar.publikation?.ort) md.push(`**Ort:** ${spar.publikation.ort}`);
-    if (spar.werk?.zitation?.format) md.push(`**Zitation:** ${spar.werk.zitation.format}`);
+    if (meta.autor) md.push(`**Autor:** ${meta.autor}${meta.organisation ? ", " + meta.organisation : ""}`);
+    if (meta.ort) md.push(`**Ort:** ${meta.ort}`);
+    if (meta.zitation) md.push(`**Zitation:** ${meta.zitation}`);
     md.push(""); md.push("---"); md.push("");
   }
 
   let bi = 0;
-  for (const t of a.teile) {
+  for (const block of ast.eintraege) {
     const resolved = resolvedBlocks[bi] || null;
     bi++;
 
-    if (t.typ === "concept") {
-      md.push(`## ${t.name || "Konzept"}`); md.push("");
-      if (t.definition) { md.push(t.definition); md.push(""); }
-      if (resolved) { md.push(resolved); md.push(""); }
-    } else if (t.typ === "task") {
-      md.push(`## ${t.name || "Aufgabe"}`); md.push("");
-      if (t.vorraussetzung) { md.push(`**Voraussetzung:** ${t.vorraussetzung}`); md.push(""); }
-      if (t.schritte?.length > 0) {
-        md.push("### Schritte"); md.push("");
-        for (const [i, s] of t.schritte.entries()) {
-          md.push(`${i + 1}. **${s.anleitung}**`);
-          if (s.ergebnis) md.push(`   → *${s.ergebnis}*`);
-          md.push("");
-        }
-      }
-      if (resolved) { md.push("**Hinweise:**"); md.push(""); md.push(resolved); md.push(""); }
-    } else if (t.typ === "reference") {
-      md.push(`## ${t.name || "Referenz"}`); md.push("");
-      if (t.eintraege?.length > 0) {
-        md.push("| Schlüssel | Wert | Einheit |"); md.push("|---|---|---|");
-        for (const e of t.eintraege) md.push(`| \`${e.schluessel}\` | ${e.wert} | ${e.einheit} |`);
-        md.push("");
-      }
-      if (resolved) { md.push(resolved); md.push(""); }
-    } else if (t.typ === "absatz") {
-      if (t.inhalt) { md.push(t.inhalt); md.push(""); }
-      if (resolved) { md.push(resolved); md.push(""); }
+    md.push(`## ${block.id || "Abschnitt"}`); md.push("");
+    if (block.fakten) { md.push(block.fakten); md.push(""); }
+    if (block.eintraege?.length > 0) {
+      md.push("| Schlüssel | Wert | Einheit |"); md.push("|---|---|---|");
+      for (const e of block.eintraege) md.push(`| \`${e.schluessel}\` | ${e.wert} | ${e.einheit} |`);
+      md.push("");
     }
+    if (resolved) { md.push(resolved); md.push(""); }
   }
   return md.join("\n");
+}
+
+// ============================================================
+// HTML (Website)
+// ============================================================
+
+function toHTML(ast, params, resolvedBlocks) {
+  const meta = ast.meta;
+  const html = [];
+
+  html.push("<!DOCTYPE html>");
+  html.push("<html lang=\"de\">");
+  html.push("<head>");
+  html.push(`  <meta charset="UTF-8">`);
+  html.push(`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`);
+  html.push(`  <title>${meta.titel || "ISCRIPT"}</title>`);
+  html.push(`  <meta name="description" content="${meta.untertitel || ""}">`);
+  html.push(`  <meta name="author" content="${meta.autor || ""}">`);
+  html.push(`  <style>`);
+  html.push(`    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #333; }`);
+  html.push(`    h1 { font-size: 2rem; margin-bottom: 0.5rem; }`);
+  html.push(`    h2 { font-size: 1.4rem; margin-top: 2rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }`);
+  html.push(`    .meta { color: #666; font-size: 0.9rem; margin-bottom: 2rem; }`);
+  html.push(`    .cta a { display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin-top: 1rem; }`);
+  html.push(`    .cta a:hover { background: #1d4ed8; }`);
+  html.push(`    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }`);
+  html.push(`    th, td { padding: 0.5rem; border: 1px solid #ddd; text-align: left; }`);
+  html.push(`    th { background: #f5f5f5; }`);
+  html.push(`  </style>`);
+  html.push("</head>");
+  html.push("<body>");
+
+  if (meta.titel) html.push(`  <h1>${meta.titel}</h1>`);
+  if (meta.untertitel) html.push(`  <p class="meta">${meta.untertitel}</p>`);
+
+  if (meta.autor || meta.ort) {
+    html.push(`  <div class="meta">`);
+    if (meta.autor) html.push(`    <span>${meta.autor}${meta.organisation ? ", " + meta.organisation : ""}</span>`);
+    if (meta.ort) html.push(`    <span> · ${meta.ort}</span>`);
+    html.push(`  </div>`);
+  }
+
+  let bi = 0;
+  for (const block of ast.eintraege) {
+    const resolved = resolvedBlocks[bi] || null;
+    bi++;
+
+    const id = block.id || "abschnitt";
+    html.push(`  <section class="${id}">`);
+    html.push(`    <h2>${id}</h2>`);
+    if (block.fakten) html.push(`    <p>${block.fakten}</p>`);
+    if (block.eintraege?.length > 0) {
+      html.push(`    <table>`);
+      html.push(`      <thead><tr><th>Schlüssel</th><th>Wert</th><th>Einheit</th></tr></thead>`);
+      html.push(`      <tbody>`);
+      for (const e of block.eintraege) {
+        html.push(`        <tr><td><code>${e.schluessel}</code></td><td>${e.wert}</td><td>${e.einheit}</td></tr>`);
+      }
+      html.push(`      </tbody>`);
+      html.push(`    </table>`);
+    }
+    if (resolved) html.push(`    <p>${resolved}</p>`);
+    html.push(`  </section>`);
+  }
+
+  html.push("</body>");
+  html.push("</html>");
+  return html.join("\n");
 }
 
 // ============================================================
@@ -374,31 +351,25 @@ function generateDiff(generated, edited) {
       ""
     ].join("\n");
   }
-  
+
   const genLines = generated.split("\n");
   const editLines = edited.split("\n");
-  
-  // Einfacher Linien-Diff (sufficient für Prototyp)
+
   const added = [];
   const removed = [];
-  const unchanged = [];
-  
-  // Naiver Vergleich: Zeilen, die in generated sind aber nicht in edited
+
   for (const line of genLines) {
     if (!editLines.includes(line)) {
       added.push(line);
-    } else {
-      unchanged.push(line);
     }
   }
-  
-  // Zeilen, die in edited sind aber nicht in generated
+
   for (const line of editLines) {
     if (!genLines.includes(line)) {
       removed.push(line);
     }
   }
-  
+
   const diff = [
     "# Diff: neue Generierung vs. bestehende Überarbeitung",
     "",
@@ -409,7 +380,7 @@ function generateDiff(generated, edited) {
     "## Geändert (in der neuen Generierung, nicht in der Überarbeitung)",
     "",
   ];
-  
+
   if (added.length === 0) {
     diff.push("(keine neuen Zeilen)", "");
   } else {
@@ -417,9 +388,9 @@ function generateDiff(generated, edited) {
     diff.push(added.join("\n"));
     diff.push("```", "");
   }
-  
+
   diff.push("## Entfernt (in der Überarbeitung, nicht in der neuen Generierung)", "");
-  
+
   if (removed.length === 0) {
     diff.push("(keine entfernten Zeilen)", "");
   } else {
@@ -427,14 +398,14 @@ function generateDiff(generated, edited) {
     diff.push(removed.join("\n"));
     diff.push("```", "");
   }
-  
+
   diff.push("## Aktion",
-    "");
-  diff.push("Entscheidung: ",
+    "",
+    "Entscheidung: ",
     "- **Übernehmen:** Die neue Generierung ist besser → `artikel.generiert.md` in `artikel.ueberarbeitet.md` kopieren");
   diff.push("- **Behalten:** Die bestehende Überarbeitung ist besser → `artikel.ueberarbeitet.md` bleibt so");
   diff.push("- **Mischen:** Manuell auswählen, was aus der neuen Generierung übernommen wird");
-  
+
   return diff.join("\n");
 }
 
@@ -447,39 +418,45 @@ function main() {
   const get = f => { const i = args.indexOf(f); return i !== -1 && i + 1 < args.length ? args[i + 1] : null; };
 
   const codePath = get("--code");
-  const parameterPath = get("--parameter"); // Neu: parameter.json aus Stufe 2
+  const parameterPath = get("--parameter");
+  const domaene = get("--domaene") || "fachpublikation";
   const outPath = get("--out") || "out";
 
   if (!codePath || !parameterPath) {
-    console.error("Nutzung: node resolver/resolve.js --code <.isc> --parameter <parameter.json> --out <dir>");
-    console.error("  parameter.json wird von resolver/kontext-extrahieren.js erzeugt.");
+    console.error("Nutzung: node resolver/resolve.js --code <.isc> --parameter <parameter.json> --domaene <name> --out <dir>");
+    console.error("  --domaene: fachpublikation | website");
     process.exit(1);
   }
 
   const code = readFileSync(pathResolve(codePath), "utf-8");
-  const kontextParams = JSON.parse(readFileSync(pathResolve(parameterPath), "utf-8"));
+  const params = JSON.parse(readFileSync(pathResolve(parameterPath), "utf-8"));
 
   console.log("ISCRIPT Resolver (Stufe 3) — Parameter + Code → Artikel");
   console.log("============================================");
+  console.log(`Code:      ${pathResolve(codePath)}`);
   console.log(`Parameter: ${pathResolve(parameterPath)}`);
+  console.log(`Domäne:    ${domaene}`);
+  console.log("");
 
   console.log("[1/5] Code parsen ...");
   const ast = parseIsc(code);
-  console.log(`      → Titel: ${ast.artikel.titel || "(keiner)"}`);
-  console.log(`      → ${ast.artikel.teile.length} Teile:`);
-  for (const t of ast.artikel.teile) console.log(`        • ${t.typ}: ${t.name || "(unnamed)"}`);
+  console.log(`      → Titel: ${ast.meta.titel || "(keiner)"}`);
+  console.log(`      → ${ast.eintraege.length} Blöcke:`);
+  for (const b of ast.eintraege) console.log(`        • ${b.id || "(unnamed)"}`);
   console.log(`      → ${ast._blocks.length} ?{}-Blöcke`);
-  console.log(`      → SPAR: autor=${ast.spar.autor?.name || "?"}`);
+  console.log(`      → Meta: autor=${ast.meta.autor || "?"}`);
 
   console.log("[2/5] Parameter laden (aus Stufe 2) ...");
-  console.log(`      → Publikum: ${kontextParams.publikum.typ} (${kontextParams.publikum.fachkenntnisse}/5) — ${kontextParams.publikum.sicherheit}`);
-  console.log(`      → Ton: ${kontextParams.ton.stil}, Person: ${kontextParams.ton.person} — ${kontextParams.ton.sicherheit}`);
-  console.log(`      → Komprimierung: ${kontextParams.laenge.komprimierung} — ${kontextParams.laenge.sicherheit}`);
-  const gw = Object.entries(kontextParams.fokus.gewichtung || {});
-  if (gw.length) console.log(`      → Fokus: ${gw.map(([k, v]) => `${k}=${v}`).join(", ")} — ${kontextParams.fokus.sicherheit}`);
+  console.log(`      → Inhalt: ${params.inhalt?.beschreibung || "?"} — ${params.inhalt?.sicherheit || "?"}`);
+  console.log(`      → Publikum: ${params.form?.publikum?.typ || "?"} (${params.form?.publikum?.fachkenntnisse || "?"}/5) — ${params.form?.publikum?.sicherheit || "?"}`);
+  console.log(`      → Ton: ${params.form?.ton?.stil || "?"}, Person: ${params.form?.ton?.person || "?"} — ${params.form?.ton?.sicherheit || "?"}`);
+  console.log(`      → Komprimierung: ${params.form?.laenge?.komprimierung || "?"} — ${params.form?.laenge?.sicherheit || "?"}`);
+  const gw = Object.entries(params.form?.fokus?.gewichtung || {});
+  if (gw.length) console.log(`      → Fokus: ${gw.map(([k, v]) => `${k}=${v}`).join(", ")} — ${params.form?.fokus?.sicherheit || "?"}`);
+  console.log(`      → Zielformat: ${params.form?.zielformat || "markdown"}`);
 
   console.log("[3/5] Invarianzprüfung ...");
-  const inv = checkInvarianzen(kontextParams);
+  const inv = checkInvarianzen(params);
   if (!inv.ok) {
     console.error("      ✗ Verletzt: " + inv.verletzungen.map(v => v.feld).join(", "));
     process.exit(1);
@@ -487,23 +464,33 @@ function main() {
   console.log("      ✓ OK");
 
   console.log("[4/5] ?{}-Blöcke auflösen ...");
-  const resolved = ast._blocks.map(b => resolveBlock(b, kontextParams));
+  const resolved = ast._blocks.map(b => resolveBlock(b, params));
   const ok = resolved.filter(Boolean).length;
   console.log(`      → ${ok}/${ast._blocks.length} aufgelöst`);
 
-  console.log("[5/5] Markdown generieren ...");
-  const md = toMarkdown(ast, kontextParams, resolved);
+  console.log("[5/5] Artefakt generieren ...");
+  const zielformat = params.form?.zielformat || "markdown";
+  let generated, generatedExt;
+
+  if (zielformat === "html" || domaene === "website") {
+    generated = toHTML(ast, params, resolved);
+    generatedExt = "html";
+  } else {
+    generated = toMarkdown(ast, params, resolved);
+    generatedExt = "md";
+  }
+
   mkdirSync(pathResolve(outPath), { recursive: true });
-  
+
   // Ebene 4: Artefakt in zwei Schichten teilen
-  const generatedPath = join(pathResolve(outPath), "artikel.generiert.md");
-  const editedPath = join(pathResolve(outPath), "artikel.ueberarbeitet.md");
-  
+  const generatedPath = join(pathResolve(outPath), `artikel.generiert.${generatedExt}`);
+  const editedPath = join(pathResolve(outPath), `artikel.ueberarbeitet.${generatedExt}`);
+
   // Generierte Schicht: wird bei jedem Lauf überschrieben
-  writeFileSync(generatedPath, md, "utf-8");
-  
+  writeFileSync(generatedPath, generated, "utf-8");
+
   // Überarbeitete Schicht: bleibt erhalten, wenn sie existiert
-  let editedMd = md; // Default: wenn keine Überarbeitung existiert, übernehmen wir die Generierung
+  let editedMd = generated;
   if (existsSync(editedPath)) {
     editedMd = readFileSync(editedPath, "utf-8");
     console.log("      → Bestehende Überarbeitung gefunden: artikel.ueberarbeitet.md");
@@ -512,13 +499,13 @@ function main() {
     console.log("      → Keine bestehende Überarbeitung — artikel.ueberarbeitet.md wird initialisiert");
   }
   writeFileSync(editedPath, editedMd, "utf-8");
-  
+
   // Diff-Mechanismus: was hat sich zwischen Generierung und Überarbeitung geändert?
   const diffPath = join(pathResolve(outPath), "artikel.diff.md");
-  const diff = generateDiff(md, editedMd);
+  const diff = generateDiff(generated, editedMd);
   writeFileSync(diffPath, diff, "utf-8");
-  
-  const words = md.split(/\s+/).filter(Boolean).length;
+
+  const words = generated.split(/\s+/).filter(Boolean).length;
   console.log(`      → ${generatedPath} (${words} Wörter)`);
   console.log(`      → ${editedPath} (bleibt erhalten)`);
   console.log(`      → ${diffPath} (was hat sich geändert?)`);
