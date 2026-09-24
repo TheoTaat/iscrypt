@@ -1,12 +1,20 @@
 {
   "name": "iscrypt",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "ISCRIPT – JavaScript + Kontext: formale Code-Struktur mit freier Sprache",
   "license": "MIT",
+  "main": "resolver/resolve.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TheoTaat/iscrypt"
+    "url": "https://github.com/TheoTaat/iscrypt.git"
   },
+  "files": [
+    "domains/",
+    "resolver/",
+    "vorlagen/",
+    "ISCRIPT-Grundlagen.md",
+    "README.md"
+  ],
   "keywords": [
     "iscrypt",
     "programming-language",
