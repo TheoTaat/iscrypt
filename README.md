@@ -1,11 +1,16 @@
 # ISCRIPT
 
-Eine Programmiersprache, die zwei Ebenen verbindet: **Code** und
-**Kontext**. Erst beide zusammen ergeben ein konkretes Artefakt.
+Eine Programmiersprache, die **vier Ebenen** verbindet: **Code**,
+**Kontext**, **Auflösung** und **Artefakt**. Erst alle vier zusammen
+ergeben ein konkretes, überarbeitbares Ergebnis.
 
 ISCRIPT ist JavaScript-abwärtskompatibel. Gültiges JavaScript bleibt
 gültig. Zusätzlich führt ISCRIPT eine zweite, grammatikfreie Ebene ein
 — den **Kontext** — in freier menschlicher Sprache.
+
+Der zentrale Punkt: **Das Artefakt ist nie fertig, wenn der Resolver
+durchläuft.** Es ist ein Rohling, den der Mensch überarbeitet. Die
+Überarbeitung überlebt den nächsten Lauf.
 
 ## Status: Prototyp ✅
 
@@ -13,15 +18,58 @@ Dieses Repository enthält einen **lauffähigen Prototyp**:
 den Fachartikel über ISCRIPT selbst, geschrieben in ISCRIPT und
 mit dem ISCRIPT-Resolver in Markdown aufgelöst.
 
+**Vier Ebenen, nicht drei:**
+
 ```
-Kontext (freie Sprache, vom Autor)
+1. Code        (vom Menschen geschrieben, anpassbar)
         ↓
-KI-Schicht: Kontext → Parameter (JSON)     ← HIER KI
+2. Kontext     (vom Menschen geschrieben, anpassbar)
         ↓
-Resolver: Parameter + Code → Artikel       ← regelbasiert
+3. Auflösung   (KI an genau einer Stelle, protokolliert)
+        ↓
+4. Artefakt    (KI-generiert, ABER vom Menschen überarbeitbar)
 ```
 
+Jede Ebene ist rückkoppelbar. Der Mensch arbeitet nicht nur vorne
+(Code, Kontext), sondern auch hinten (Artefakt).
+
 Der Artikel ist nicht nur *über* ISCRIPT — er *ist* der Prototyp.
+
+## Die vier Ebenen
+
+| Ebene | Was | Wer | Anpassbar? |
+|---|---|---|---|
+| **Code** | Struktur, Fakten, `?{}` | Mensch | Ja |
+| **Kontext** | Situation, Ton, Fokus | Mensch | Ja |
+| **Auflösung** | Code + Kontext → Rohling | KI (Stufe 2) + Regeln | Protokolliert |
+| **Artefakt** | Der fertige Text | KI erzeugt, Mensch überarbeitet | Ja, und die Überarbeitung überlebt |
+
+## Die drei Rückkanäle
+
+```
+        ┌──────────────────────────────────┐
+        │                                  │
+        ▼                                  │
+   Code ──→ Kontext ──→ Auflösung ──→ Artefakt
+        ▲                                  │
+        │                                  │
+        └──────────────────────────────────┘
+              Rückkanal (Mensch)
+```
+
+**Drei Rückkanäle:**
+
+1. **Code-Rückkanal:** Autor ändert `artikel/iscrypt.isc` → nächster
+   Lauf nutzt neue Struktur
+2. **Kontext-Rückkanal:** Autor ändert
+   `artikel/kontexte/fachartikel.txt` → nächster Lauf nutzt neue
+   Deutung
+3. **Artefakt-Rückkanal:** Autor ändert
+   `out/artikel.ueberarbeitet.md` → bleibt erhalten, Diff zeigt
+   Änderungen
+
+Der Mensch arbeitet nicht nur vorne (Code, Kontext), sondern auch
+hinten (Artefakt). Jede Ebene ist rückkoppelbar.
 
 ## Schnellstart
 
@@ -36,14 +84,21 @@ node resolver/kontext-extrahieren.js \
   --kontext artikel/kontexte/fachartikel.txt \
   --out out/
 
-# Stufe 3: Parameter + Code → Artikel — regelbasiert
+# Stufe 3: Parameter + Code → Rohling — regelbasiert
 node resolver/resolve.js \
   --code artikel/iscrypt.isc \
   --parameter out/parameter.json \
   --out out/
 ```
 
-Ergebnis: `out/artikel.md` — der Fachartikel in Markdown.
+**Ergebnis — drei Dateien in `out/`:**
+
+- `artikel.generiert.md` — der Rohling, wird bei jedem Lauf
+  überschrieben
+- `artikel.ueberarbeitet.md` — die menschliche Überarbeitung, bleibt
+  erhalten
+- `artikel.diff.md` — was hat sich zwischen neuer Generierung und
+  bestehender Überarbeitung geändert?
 
 **Wichtig:** Der Kontext-Text (`fachartikel.txt`) muss vom Autor
 kommen — in freier menschlicher Sprache. Die Vorlage
@@ -51,6 +106,12 @@ kommen — in freier menschlicher Sprache. Die Vorlage
 Länge, Fokus). Die KI-Schicht liest diesen Text und extrahiert
 strukturierte Parameter. Der Resolver arbeitet nur noch mit den
 Parametern, nicht mit der Prosa.
+
+**Das Artefakt ist ein Entwurf, kein Endprodukt.** Der Mensch
+überarbeitet `artikel.ueberarbeitet.md`. Beim nächsten Lauf wird
+die generierte Schicht neu erzeugt, die überarbeitete Schicht bleibt.
+Ein Diff zeigt, was sich geändert hat. Der Mensch entscheidet, ob er
+die neue Generierung übernimmt oder seine Überarbeitung behält.
 
 ## Wo KI hingehört — und wo nicht
 
@@ -72,6 +133,20 @@ auf (Provider-Chain: Mistral → Kimi → Claude), gibt `parameter.json`
 heraus und protokolliert den LLM-Output unverändert in
 `parameter.log` — damit der Autor prüfen kann, was verstanden wurde.
 
+## Was die KI nicht kann
+
+- **Die KI erzeugt Rohlinge, keine fertigen Texte.**
+- **Keine KI ist derzeit gut genug, menschlichen Text in hoher
+  Qualität zu erzeugen.**
+- **Deshalb ist das Artefakt überarbeitbar und die Überarbeitung
+  bleibt erhalten.**
+- **Die KI ist ein Werkzeug zum Vorschlagen, nicht zum
+  Fertigstellen.**
+
+Das gilt für die Auflösung von `?{}` genauso wie für die
+Kontext-Extraktion. Die KI schlägt vor, der Mensch macht daraus
+ein Artefakt.
+
 ## Grenzen des Prototyps
 
 - **Die KI-Schicht (Stufe 2) ist nicht deterministisch.** Derselbe
@@ -89,6 +164,26 @@ heraus und protokolliert den LLM-Output unverändert in
   im aktuellen Markdown-Output nur teilweise gerendert. Funktioniert,
   aber noch nicht poliert.
 
+## Workflow
+
+```
+1. Autor schreibt Code (artikel/iscrypt.isc)
+2. Autor schreibt Kontext (artikel/kontexte/fachartikel.txt)
+3. KI-Schicht extrahiert Parameter (out/parameter.json)
+4. Autor prüft/korrigiert Parameter (out/parameter.override.json)
+5. Resolver erzeugt Rohling (out/artikel.generiert.md)
+6. Autor überarbeitet (out/artikel.ueberarbeitet.md)
+7. Bei Code-/Kontext-Änderung: zurück zu 3, Diff prüfen,
+   Überarbeitung erhalten
+```
+
+Beim nächsten Lauf wird die generierte Schicht neu erzeugt, die
+überarbeitete Schicht bleibt. Ein Diff zeigt, was sich geändert hat.
+Der Mensch entscheidet, ob er die neue Generierung übernimmt oder
+seine Überarbeitung behält. Das ist wie bei Git: Der generierte Text
+ist der „Upstream", die Überarbeitung ist der „Branch". Kein Merge
+ohne Prüfung.
+
 ## Projektstruktur
 
 ```
@@ -105,12 +200,14 @@ iscrypt/
 │       └── fachartikel.vorlage.txt  # Vorlage für den Autor
 ├── resolver/
 │   ├── kontext-extrahieren.js       # Stufe 2: KI-Schicht (Kontext → Parameter)
-│   └── resolve.js                   # Stufe 3: Resolver (Parameter + Code → Artikel)
+│   └── resolve.js                   # Stufe 3: Resolver (Parameter + Code → Rohling)
 └── out/
     ├── parameter.json               # Extrahierte Parameter (aus Stufe 2)
     ├── parameter.log                # Protokoll: LLM-Output + Sicherheit
     ├── parameter.override.json      # (optional) manuelle Korrekturen
-    └── artikel.md                   # Generierter Artikel (Prototyp-Output)
+    ├── artikel.generiert.md         # Rohling (wird bei jedem Lauf überschrieben)
+    ├── artikel.ueberarbeitet.md     # Menschliche Überarbeitung (bleibt erhalten)
+    └── artikel.diff.md              # Was hat sich geändert?
 ```
 
 ## Die zwei Ebenen
@@ -148,12 +245,15 @@ Derselbe Code, drei Kontexte, drei Artefakte:
   nicht eliminiert.
 - **Abwärtskompatibilität:** Gültiges JavaScript bleibt gültig.
 
-## Die drei Ebenen im Detail
+## Die vier Ebenen im Detail
 
 1. **Code** — formal, mit Grammatik, domänenspezifisch
 2. **Kontext** — freie Sprache, austauschbar, beschreibend
 3. **Auflösung** — verbindet beide; nachvollziehbar, prüfbar,
    revidierbar
+4. **Artefakt** — der fertige Text; KI-generiert, aber vom
+   Menschen überarbeitbar. Die Überarbeitung überlebt den nächsten
+   Lauf.
 
 ## Domänengrammatiken
 
@@ -202,6 +302,18 @@ in der Domänengrammatik „Fachpublikation" (DITA + SPAR):
 Publikum (Fachpublikum, 4/5), Ton (sachlich-überzeugend), Länge
 (dicht), Fokus (Concepts gewichtet 5).
 
+**Das Artefakt wird in zwei Schichten geteilt:**
+
+- `out/artikel.generiert.md` — was der Resolver erzeugt (wird bei
+  jedem Lauf überschrieben)
+- `out/artikel.ueberarbeitet.md` — was der Mensch daraus gemacht hat
+  (bleibt erhalten)
+
+Bei einem neuen Lauf wird die generierte Schicht neu erzeugt, die
+überarbeitete Schicht bleibt. Ein Diff zeigt, was sich geändert hat.
+Der Mensch entscheidet, ob er die neue Generierung übernimmt oder
+seine Überarbeitung behält.
+
 ## Offene Fragen
 
 - Wie läuft die Auflösung konkret ab? → **Im Prototyp beantwortet:**
@@ -222,9 +334,10 @@ Publikum (Fachpublikum, 4/5), Ton (sachlich-überzeugend), Länge
 - [x] Auflösungsmechanik für `?{}` konkretisieren (minimal)
 - [x] Schnittstelle zwischen Domänengrammatik und freier Kontext-Ebene
 - [x] Ersten Fachartikel als Referenzimplementierung
+- [x] Vier-Ebenen-Architektur (Code, Kontext, Auflösung, Artefakt)
+- [x] Artefakt in zwei Schichten (generiert / überarbeitet) + Diff
 - [ ] Weitere Domänen (Menschenleben, Narration)
 - [ ] Weitere Kontexte (Website, Buch, DSL-Grammatik)
-- [ ] LLM-Anbindung (optional, für komplexere Auflösung)
 - [ ] Weitere Zielformate (HTML, DITA-XML, PDF)
 
 ## Dokumentation

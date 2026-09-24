@@ -1,16 +1,20 @@
-#!/usr/bin/env node
 // ============================================================
-// ISCRIPT Resolver — regelbasiert, nachvollziehbar
-// Code (.isc) + Kontext (.txt) → Artikel (Markdown)
+// ISCRIPT Resolver (Stufe 3) — regelbasiert, nachvollziehbar
+// Parameter (.json) + Code (.isc) → Artikel (Markdown)
+//
+// Ebene 4: Das Artefakt wird in zwei Schichten geteilt:
+//   - artikel.generiert.md   → wird bei jedem Lauf überschrieben
+//   - artikel.ueberarbeitet.md → bleibt erhalten (menschliche Überarbeitung)
+//   - artikel.diff.md        → was hat sich geändert?
 //
 // Aufruf:
 //   node resolver/resolve.js \
 //     --code artikel/iscrypt.isc \
-//     --kontext artikel/kontexte/fachartikel.txt \
+//     --parameter out/parameter.json \
 //     --out out/
 // ============================================================
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, resolve as pathResolve } from "node:path";
 
 // ============================================================
@@ -357,6 +361,84 @@ function toMarkdown(ast, kontextParams, resolvedBlocks) {
 }
 
 // ============================================================
+// DIFF-MEKANISMUS: neue Generierung vs. bestehende Überarbeitung
+// ============================================================
+
+function generateDiff(generated, edited) {
+  if (generated === edited) {
+    return [
+      "# Diff: neue Generierung vs. bestehende Überarbeitung",
+      "",
+      "**Keine Unterschiede.**",
+      "Die generierte Ausgabe stimmt mit der bestehenden Überarbeitung überein.",
+      ""
+    ].join("\n");
+  }
+  
+  const genLines = generated.split("\n");
+  const editLines = edited.split("\n");
+  
+  // Einfacher Linien-Diff (sufficient für Prototyp)
+  const added = [];
+  const removed = [];
+  const unchanged = [];
+  
+  // Naiver Vergleich: Zeilen, die in generated sind aber nicht in edited
+  for (const line of genLines) {
+    if (!editLines.includes(line)) {
+      added.push(line);
+    } else {
+      unchanged.push(line);
+    }
+  }
+  
+  // Zeilen, die in edited sind aber nicht in generated
+  for (const line of editLines) {
+    if (!genLines.includes(line)) {
+      removed.push(line);
+    }
+  }
+  
+  const diff = [
+    "# Diff: neue Generierung vs. bestehende Überarbeitung",
+    "",
+    "**Die generierte Ausgabe hat sich geändert.**",
+    "Die bestehende Überarbeitung (artikel.ueberarbeitet.md) bleibt erhalten.",
+    "Der Mensch entscheidet, ob er die neue Generierung übernimmt oder seine Überarbeitung behält.",
+    "",
+    "## Geändert (in der neuen Generierung, nicht in der Überarbeitung)",
+    "",
+  ];
+  
+  if (added.length === 0) {
+    diff.push("(keine neuen Zeilen)", "");
+  } else {
+    diff.push("```markdown");
+    diff.push(added.join("\n"));
+    diff.push("```", "");
+  }
+  
+  diff.push("## Entfernt (in der Überarbeitung, nicht in der neuen Generierung)", "");
+  
+  if (removed.length === 0) {
+    diff.push("(keine entfernten Zeilen)", "");
+  } else {
+    diff.push("```markdown");
+    diff.push(removed.join("\n"));
+    diff.push("```", "");
+  }
+  
+  diff.push("## Aktion",
+    "");
+  diff.push("Entscheidung: ",
+    "- **Übernehmen:** Die neue Generierung ist besser → `artikel.generiert.md` in `artikel.ueberarbeitet.md` kopieren");
+  diff.push("- **Behalten:** Die bestehende Überarbeitung ist besser → `artikel.ueberarbeitet.md` bleibt so");
+  diff.push("- **Mischen:** Manuell auswählen, was aus der neuen Generierung übernommen wird");
+  
+  return diff.join("\n");
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 
@@ -412,12 +494,37 @@ function main() {
   console.log("[5/5] Markdown generieren ...");
   const md = toMarkdown(ast, kontextParams, resolved);
   mkdirSync(pathResolve(outPath), { recursive: true });
-  const out = join(pathResolve(outPath), "artikel.md");
-  writeFileSync(out, md, "utf-8");
+  
+  // Ebene 4: Artefakt in zwei Schichten teilen
+  const generatedPath = join(pathResolve(outPath), "artikel.generiert.md");
+  const editedPath = join(pathResolve(outPath), "artikel.ueberarbeitet.md");
+  
+  // Generierte Schicht: wird bei jedem Lauf überschrieben
+  writeFileSync(generatedPath, md, "utf-8");
+  
+  // Überarbeitete Schicht: bleibt erhalten, wenn sie existiert
+  let editedMd = md; // Default: wenn keine Überarbeitung existiert, übernehmen wir die Generierung
+  if (existsSync(editedPath)) {
+    editedMd = readFileSync(editedPath, "utf-8");
+    console.log("      → Bestehende Überarbeitung gefunden: artikel.ueberarbeitet.md");
+    console.log("      → Diff wird erzeugt (neue Generierung vs. bestehende Überarbeitung)");
+  } else {
+    console.log("      → Keine bestehende Überarbeitung — artikel.ueberarbeitet.md wird initialisiert");
+  }
+  writeFileSync(editedPath, editedMd, "utf-8");
+  
+  // Diff-Mechanismus: was hat sich zwischen Generierung und Überarbeitung geändert?
+  const diffPath = join(pathResolve(outPath), "artikel.diff.md");
+  const diff = generateDiff(md, editedMd);
+  writeFileSync(diffPath, diff, "utf-8");
+  
   const words = md.split(/\s+/).filter(Boolean).length;
-  console.log(`      → ${out} (${words} Wörter)`);
+  console.log(`      → ${generatedPath} (${words} Wörter)`);
+  console.log(`      → ${editedPath} (bleibt erhalten)`);
+  console.log(`      → ${diffPath} (was hat sich geändert?)`);
   console.log("");
-  console.log("Fertig.");
+  console.log("Fertig. Der Mensch entscheidet, ob er die neue Generierung übernimmt");
+  console.log("oder seine Überarbeitung behält.");
 }
 
 main();
