@@ -20,8 +20,8 @@
 //
 // Aufruf:
 //   node resolver/kontext-extrahieren.js \
-//     --inhalt artikel/kontexte/iscrypt.inhalt.txt \
-//     --form artikel/kontexte/fachartikel.form.txt \
+//     --inhalt artikel/kontexte/iscrypt.inhalt.md \
+//     --form artikel/kontexte/fachartikel.form.md \
 //     --out out/
 //
 // Erzeugt:
@@ -372,7 +372,7 @@ async function main() {
   const outPath = get("--out") || "out";
 
   if (!inhaltPath || !formPath) {
-    console.error("Nutzung: node resolver/kontext-extrahieren.js --inhalt <inhalt.txt> --form <form.txt> --out <dir>");
+    console.error("Nutzung: node resolver/kontext-extrahieren.js --inhalt <inhalt.md> --form <form.md> --out <dir>");
     console.error("  --inhalt: Kontext A (Inhalt, artefakt-unabhängig)");
     console.error("  --form:   Kontext B (Form, artefakt-abhängig)");
     process.exit(1);

@@ -82,8 +82,8 @@ ausgetauscht (Fachartikel, Homepage, Buch, Vortrag).
 - Länge: Wie ausführlich?
 - Fokus: Worauf konzentrieren?
 
-Generische Vorlagen: `vorlagen/kontext-inhalt.vorlage.txt` und
-`vorlagen/kontext-form.vorlage.txt`.
+Generische Vorlagen (Markdown): `vorlagen/kontext-inhalt.vorlage.md` und
+`vorlagen/kontext-form.vorlage.md`.
 
 ## Was wird ausgetauscht?
 
@@ -145,8 +145,8 @@ npm install "iscrypt@github:TheoTaat/iscrypt#v0.1.0"
 
 # 2. Kontext A + B → Parameter
 node node_modules/iscrypt/resolver/kontext-extrahieren.js \
-  --inhalt kontexte/ihalt.txt \
-  --form kontexte/fachartikel.form.txt \
+  --inhalt kontexte/ihalt.md \
+  --form kontexte/fachartikel.form.md \
   --out out/
 
 # 3. Code + Parameter → Rohling
@@ -182,8 +182,8 @@ iscrypt/
 │   ├── kontext-extrahieren.js    # Stufe 2: KI-Schicht
 │   └── resolve.js                # Stufe 3: Resolver
 └── vorlagen/
-    ├── kontext-inhalt.vorlage.txt   # Vorlage Kontext A
-    └── kontext-form.vorlage.txt     # Vorlage Kontext B
+    ├── kontext-inhalt.vorlage.md      # Vorlage Kontext A (Markdown)
+    └── kontext-form.vorlage.md        # Vorlage Kontext B (Markdown)
 ```
 
 ## Versionierung / Dependency
