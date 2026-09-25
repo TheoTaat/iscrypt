@@ -1,6 +1,6 @@
 {
   "name": "iscrypt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ISCRIPT – JavaScript + Kontext: formale Code-Struktur mit freier Sprache",
   "license": "MIT",
   "main": "resolver/resolve.js",
